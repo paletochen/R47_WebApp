@@ -214,10 +214,17 @@ body {
     }
     .keyboard-grid {
         padding: 5px;
+        gap: 2px 4px; /* Reduced gap on small screens */
     }
     .btn {
-        padding: 6px 0;
-        font-size: 0.8rem;
+        padding: 2px 0; /* Reduced padding on small screens */
+        font-size: 1rem; /* Reduced font size */
+    }
+    .lbl {
+        font-size: 0.8rem; /* Reduced label font size */
+    }
+    .alpha {
+        font-size: 0.8rem; /* Reduced alpha font size */
     }
 }
 

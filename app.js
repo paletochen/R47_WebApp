@@ -105,18 +105,7 @@ window.r47RequestFile = async (kind) => {
                         }
                     }
                     
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: 'SNAP.bmp',
-                        types: [{
-                            description: 'BMP Image',
-                            accept: {'image/bmp': ['.bmp']},
-                        }],
-                        startIn: startInDir
-                    });
-                    
-                    const writable = await handle.createWritable();
-                    
-                    // Call the named export to set the name and trigger dump
+                    // Trigger screen dump in core to populate buffer
                     Module.ccall('r47_snap_named', null, ['string'], ['SNAP.bmp'], { async: true });
                     
                     // Get buffer pointer and size from WASM
@@ -130,9 +119,32 @@ window.r47RequestFile = async (kind) => {
                     }
                     
                     const data = new Uint8Array(Module.HEAPU8.buffer, ptr, size);
-                    await writable.write(data);
-                    await writable.close();
-                    console.log('SNAP file saved successfully via JS');
+
+                    if ('showSaveFilePicker' in window) {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: 'SNAP.bmp',
+                            types: [{
+                                description: 'BMP Image',
+                                accept: {'image/bmp': ['.bmp']},
+                            }],
+                            startIn: startInDir
+                        });
+                        
+                        const writable = await handle.createWritable();
+                        await writable.write(data);
+                        await writable.close();
+                        console.log('SNAP file saved successfully via JS');
+                    } else {
+                        // Fallback for iOS / Safari
+                        const blob = new Blob([data], { type: 'image/bmp' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'SNAP.bmp';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        console.log('SNAP file downloaded as fallback');
+                    }
                     
                     resolve(true);
                 } catch (e) {
@@ -413,9 +425,14 @@ function initSettings() {
 
     workDirBtn.addEventListener('click', async () => {
         try {
-            const handle = await window.showDirectoryPicker();
-            workDirStatus.innerText = handle.name;
-            localStorage.setItem('work-directory-selected', 'true');
+            let handle;
+            if ('showDirectoryPicker' in window) {
+                handle = await window.showDirectoryPicker();
+                workDirStatus.innerText = handle.name;
+                localStorage.setItem('work-directory-selected', 'true');
+            } else {
+                alert("Directory picking is not supported on this browser/iOS. Caching state will still work locally.");
+            }
             window.workDirHandle = handle;
             await createSubfoldersInDirectory(handle);
         } catch (err) {

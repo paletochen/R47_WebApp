@@ -3,7 +3,7 @@
     "short_name": "R47 Calc",
     "description": "R47 Scientific Calculator Web Application",
     "start_url": "./",
-    "display": "standalone",
+    "display": "fullscreen",
     "background_color": "#0a0a0a",
     "theme_color": "#0a0a0a",
     "icons": [
