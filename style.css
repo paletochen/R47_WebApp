@@ -99,7 +99,7 @@ body {
 .keyboard-grid {
     display: grid;
     grid-template-columns: repeat(30, 1fr);
-    gap: 2px 4px; /* Row gap 2px, Col gap 4px */
+    gap: 2px 10px; /* Increased Col gap */
     width: 100%;
     padding: 8px;
     background: #111;
@@ -122,16 +122,20 @@ body {
 
 /* Label Styles */
 .lbl {
-    font-size: 0.9rem; /* Increased size for readability */
+    font-size: 1.1rem; /* Increased size for readability */
     font-weight: 700;
     min-height: 14px;
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    font-family: var(--font-sans);
+    font-family: var(--font-standard);
     padding: 0 4px 2px 4px;
     width: 80%; /* Match key width */
     gap: 12px; /* Space between gold and blue labels */
+}
+
+.key-container.c-lbl .lbl {
+    gap: 4px; /* Reduced gap to bring labels closer to center */
 }
 
 .lbl .gold {
@@ -157,7 +161,7 @@ body {
     color: var(--text-color);
     font-size: 1.4rem; /* Increased size */
     font-weight: 700;
-    padding: 8px 0;
+    padding: 4px 0; /* Reduced padding */
     border-radius: var(--radius);
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1);
@@ -174,7 +178,7 @@ body {
     position: absolute;
     left: calc(80% + 4px);
     bottom: 2px;
-    font-size: 0.65rem;
+    font-size: 1rem; /* Increased size for readability */
     color: #fff; /* White for Alpha as requested */
     font-weight: 400;
 }
