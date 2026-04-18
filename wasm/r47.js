@@ -5548,6 +5548,8 @@ var _sendSimKeyNative = Module['_sendSimKeyNative'] = makeInvalidEarlyAccess('_s
 var _getXRegisterString = Module['_getXRegisterString'] = makeInvalidEarlyAccess('_getXRegisterString');
 var _isAlphaMode = Module['_isAlphaMode'] = makeInvalidEarlyAccess('_isAlphaMode');
 var _getKeyLabelNative = Module['_getKeyLabelNative'] = makeInvalidEarlyAccess('_getKeyLabelNative');
+var _openHomeMenu = Module['_openHomeMenu'] = makeInvalidEarlyAccess('_openHomeMenu');
+var _openMyMenu = Module['_openMyMenu'] = makeInvalidEarlyAccess('_openMyMenu');
 var _getSnapBufferPtr = Module['_getSnapBufferPtr'] = makeInvalidEarlyAccess('_getSnapBufferPtr');
 var _getSnapBufferSize = Module['_getSnapBufferSize'] = makeInvalidEarlyAccess('_getSnapBufferSize');
 var _r47_save_program_named = Module['_r47_save_program_named'] = makeInvalidEarlyAccess('_r47_save_program_named');
@@ -5594,6 +5596,8 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['getXRegisterString'] != 'undefined', 'missing Wasm export: getXRegisterString');
   assert(typeof wasmExports['isAlphaMode'] != 'undefined', 'missing Wasm export: isAlphaMode');
   assert(typeof wasmExports['getKeyLabelNative'] != 'undefined', 'missing Wasm export: getKeyLabelNative');
+  assert(typeof wasmExports['openHomeMenu'] != 'undefined', 'missing Wasm export: openHomeMenu');
+  assert(typeof wasmExports['openMyMenu'] != 'undefined', 'missing Wasm export: openMyMenu');
   assert(typeof wasmExports['getSnapBufferPtr'] != 'undefined', 'missing Wasm export: getSnapBufferPtr');
   assert(typeof wasmExports['getSnapBufferSize'] != 'undefined', 'missing Wasm export: getSnapBufferSize');
   assert(typeof wasmExports['r47_save_program_named'] != 'undefined', 'missing Wasm export: r47_save_program_named');
@@ -5637,6 +5641,8 @@ function assignWasmExports(wasmExports) {
   _getXRegisterString = Module['_getXRegisterString'] = createExportWrapper('getXRegisterString', 0);
   _isAlphaMode = Module['_isAlphaMode'] = createExportWrapper('isAlphaMode', 0);
   _getKeyLabelNative = Module['_getKeyLabelNative'] = createExportWrapper('getKeyLabelNative', 2);
+  _openHomeMenu = Module['_openHomeMenu'] = createExportWrapper('openHomeMenu', 0);
+  _openMyMenu = Module['_openMyMenu'] = createExportWrapper('openMyMenu', 0);
   _getSnapBufferPtr = Module['_getSnapBufferPtr'] = createExportWrapper('getSnapBufferPtr', 0);
   _getSnapBufferSize = Module['_getSnapBufferSize'] = createExportWrapper('getSnapBufferSize', 0);
   _r47_save_program_named = Module['_r47_save_program_named'] = createExportWrapper('r47_save_program_named', 1);

@@ -31,37 +31,37 @@
             <!-- Key A -->
             <div class="key-container span-5">
                 <div class="lbl"><span class="gold">i</span> <span class="blue">→R</span></div>
-                <button class="btn" data-key="00">x²</button>
+                <button class="btn soft-btn" data-key="00">x²</button>
                 <span class="alpha">A</span>
             </div>
             <!-- Key B -->
             <div class="key-container span-5">
                 <div class="lbl"><span class="gold">i⊙</span> <span class="blue">→P</span></div>
-                <button class="btn" data-key="01">√x</button>
+                <button class="btn soft-btn" data-key="01">√x</button>
                 <span class="alpha">B</span>
             </div>
             <!-- Key C -->
             <div class="key-container span-5">
                 <div class="lbl"><span class="gold">x!</span> <span class="blue">.ms</span></div>
-                <button class="btn" data-key="02">1/x</button>
+                <button class="btn soft-btn" data-key="02">1/x</button>
                 <span class="alpha">C</span>
             </div>
             <!-- Key D -->
             <div class="key-container span-5">
                 <div class="lbl"><span class="gold">x√y</span> <span class="blue">.d</span></div>
-                <button class="btn" data-key="03">y^x</button>
+                <button class="btn soft-btn" data-key="03">y^x</button>
                 <span class="alpha">D</span>
             </div>
             <!-- Key E -->
             <div class="key-container span-5">
                 <div class="lbl"><span class="gold">10^x</span> <span class="blue">→I</span></div>
-                <button class="btn" data-key="04">LOG</button>
+                <button class="btn soft-btn" data-key="04">LOG</button>
                 <span class="alpha">E</span>
             </div>
             <!-- Key F -->
             <div class="key-container span-5">
                 <div class="lbl"><span class="gold">e^x</span> <span class="blue">#</span></div>
-                <button class="btn" data-key="05">LN</button>
+                <button class="btn soft-btn" data-key="05">LN</button>
                 <span class="alpha">F</span>
             </div>
 
@@ -79,7 +79,7 @@
             </div>
             <!-- Key I -->
             <div class="key-container span-5">
-                <div class="lbl"><span class="gold">π</span> <span class="blue">R↑</span></div>
+                <div class="lbl"><span class="gold">𝝅</span> <span class="blue">R↑</span></div>
                 <button class="btn" data-key="08">R↓</button>
                 <span class="alpha">I</span>
             </div>
@@ -334,10 +334,6 @@
             noInitialRun: true, // Prevent automatic main() execution
             print: function(text) {
                 console.log(text);
-                fetch('log', {
-                    method: 'POST',
-                    body: text + '\n'
-                });
             },
             preRun: [function() {
                 FS.mkdir('/persistent');

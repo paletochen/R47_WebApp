@@ -15,19 +15,16 @@ function initCalculator() {
 }
 
 function startRenderLoop(width, height) {
-    const ptr = Module._getScreenDataPtr();
-    console.log("Screen data pointer:", ptr);
+    // Call tick on a high-frequency interval (every 5ms) to drive core timers
+    setInterval(() => {
+        if (Module && Module._tick) {
+            Module._tick();
+        }
+    }, 5);
     
-    if (!ptr) {
-        console.error("Failed to get screen data pointer");
-        return;
-    }
-    
-    // Render loop
+    // Render loop synced with display refresh
     function render() {
-        Module._tick();
-        
-        if (Module._isScreenDirty()) {
+        if (Module && Module._isScreenDirty && Module._isScreenDirty()) {
             const ptr = Module._getScreenDataPtr();
             const screenBuffer = new Uint8ClampedArray(Module.HEAPU8.buffer, ptr, width * height * 4);
             const imageData = new ImageData(screenBuffer, width, height);
@@ -191,7 +188,11 @@ function initKeyboard() {
             
 
             btn.isPressed = true;
-            sendKey(keyId, isFn, false); // false = pressed
+            try {
+                sendKey(keyId, isFn, false); // false = pressed
+            } catch (err) {
+                console.warn("sendKey (press) failed with error:", err);
+            }
             btn.classList.add('pressed');
         };
         
@@ -199,9 +200,14 @@ function initKeyboard() {
         const onRelease = (e) => {
             e.preventDefault();
             if (!btn.isPressed) return;
+            
             console.log("Releasing key:", keyId, "isFn:", isFn);
             btn.isPressed = false;
-            sendKey(keyId, isFn, true); // true = released
+            try {
+                sendKey(keyId, isFn, true); // true = released
+            } catch (err) {
+                console.warn("sendKey (release) failed with error:", err);
+            }
             btn.classList.remove('pressed');
         };
         
@@ -568,19 +574,19 @@ function updateAlphaLabels() {
         '06': 'g', '07': 'h', '08': 'i', '09': 'j',
         '12': 'X.EDIT', '13': 'k', '14': 'l', '15': 'm', '16': 'CLA',
         '17': 'ω', '18': 'n', '19': 'o', '20': 'p', '21': 'q',
-        '22': 'CASE UP', '23': 'r', '24': 's', '25': 't', '26': 'u',
-        '27': 'CASE DN', '28': 'v', '29': 'w', '30': 'x', '31': 'y',
-        '32': '⏻', '33': 'z', '34': ';', '35': ':', '36': '[CAT]'
+        '22': 'CASE', '23': 'r', '24': 's', '25': 't', '26': 'u',
+        '27': 'CASE', '28': 'v', '29': 'w', '30': 'x', '31': 'y',
+        '32': '⏻', '33': 'z', '34': ';', '35': ':', '36': 'CAT'
     };
     
     const alphaBlueMapping = {
         '00': 'i', '01': '√', '02': '!', '03': '^', '04': 'e', '05': '#',
         '06': '|', '07': 'Δ', '08': 'π', '09': 'j',
-        '12': '↵', '13': '⇄', '14': '±', '15': '<E>', '16': 'CLA',
+        '12': '↵', '13': '⇄', '14': '±', '15': 'E', '16': ' ',
         '17': 'α', '18': '7', '19': '8', '20': '9', '21': '÷',
         '22': '↑', '23': '4', '24': '5', '25': '6', '26': '×',
         '27': '↓', '28': '1', '29': '2', '30': '3', '31': '-',
-        '32': 'SNAP', '33': '0', '34': '.', '35': '/', '36': '+'
+        '32': 'INFO', '33': '0', '34': '.', '35': '/', '36': '+'
     };
 
     buttons.forEach(btn => {
@@ -598,10 +604,28 @@ function updateAlphaLabels() {
                 alphaSpan.style.display = 'none'; // Hide small white label
             }
             
-            // Read labels from C core
+            // Read labels from C core as pointers
             const keyCode = parseInt(keyId, 10);
-            let goldLbl = Module.ccall('getKeyLabelNative', 'string', ['number', 'number'], [keyCode, 1]);
-            let blueLbl = Module.ccall('getKeyLabelNative', 'string', ['number', 'number'], [keyCode, 2]);
+            const goldPtr = Module.ccall('getKeyLabelNative', 'number', ['number', 'number'], [keyCode, 1]);
+            const bluePtr = Module.ccall('getKeyLabelNative', 'number', ['number', 'number'], [keyCode, 2]);
+            
+            let goldLbl = "";
+            if (goldPtr) {
+                let i = 0;
+                while (Module.HEAPU8[goldPtr + i] !== 0) {
+                    goldLbl += String.fromCharCode(Module.HEAPU8[goldPtr + i]);
+                    i++;
+                }
+            }
+            
+            let blueLbl = "";
+            if (bluePtr) {
+                let i = 0;
+                while (Module.HEAPU8[bluePtr + i] !== 0) {
+                    blueLbl += String.fromCharCode(Module.HEAPU8[bluePtr + i]);
+                    i++;
+                }
+            }
             
             // Fallback to hardcoded mapping if C returns empty
             if (!goldLbl && alphaGoldMapping[keyId]) {
@@ -655,3 +679,13 @@ setInterval(() => {
         Module.ccall('saveCalc', null, []);
     }
 }, 5000);
+
+function handleLongPress(keyId) {
+    if (keyId === '10') { // f key
+        console.log("Long press on f: Opening HOME menu");
+        Module.ccall('openHomeMenu', null, []);
+    } else if (keyId === '11') { // g key
+        console.log("Long press on g: Opening MyMenu");
+        Module.ccall('openMyMenu', null, []);
+    }
+}

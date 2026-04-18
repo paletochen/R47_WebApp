@@ -122,14 +122,13 @@ body {
 
 /* Label Styles */
 .lbl {
-    font-size: 0.75rem; /* Slightly increased for readability with custom font */
+    font-size: 0.9rem; /* Increased size for readability */
     font-weight: 700;
     min-height: 14px;
     display: flex;
     justify-content: center;
     align-items: flex-end;
     font-family: var(--font-sans);
-    text-transform: uppercase;
     padding: 0 4px 2px 4px;
     width: 80%; /* Match key width */
     gap: 12px; /* Space between gold and blue labels */
@@ -156,7 +155,7 @@ body {
     background: var(--key-bg);
     border: 1px solid var(--key-border);
     color: var(--text-color);
-    font-size: 1rem;
+    font-size: 1.4rem; /* Increased size */
     font-weight: 700;
     padding: 8px 0;
     border-radius: var(--radius);
@@ -190,7 +189,7 @@ body {
 }
 
 .btn.num-btn {
-    font-size: 1rem; /* Normalized with other buttons */
+    font-size: 1.2rem; /* Increased size */
     background: linear-gradient(to bottom, #3a3a3a 0%, #252525 100%);
     font-family: var(--font-numeric);
 }
