@@ -321,7 +321,7 @@
         // Register Service Worker for offline support
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('/R47_WebApp/sw.js')
                     .then((reg) => console.log('Service Worker: Registered'))
                     .catch((err) => console.log('Service Worker: Error:', err));
             });

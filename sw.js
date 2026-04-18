@@ -1,15 +1,15 @@
 const CACHE_NAME = 'r47-calc-v1';
 const ASSETS = [
-    './',
-    './index.html',
-    './style.css',
-    './app.js',
-    './favicon.png',
-    './wasm/r47.js',
-    './wasm/r47.wasm',
-    './fonts/C47__StandardFont.ttf',
-    './fonts/C47__NumericFont.ttf',
-    './fonts/C47__TinyFont.ttf'
+    '/R47_WebApp/',
+    '/R47_WebApp/index.html',
+    '/R47_WebApp/style.css',
+    '/R47_WebApp/app.js',
+    '/R47_WebApp/favicon.png',
+    '/R47_WebApp/wasm/r47.js',
+    '/R47_WebApp/wasm/r47.wasm',
+    '/R47_WebApp/fonts/C47__StandardFont.ttf',
+    '/R47_WebApp/fonts/C47__NumericFont.ttf',
+    '/R47_WebApp/fonts/C47__TinyFont.ttf'
 ];
 
 // Install Service Worker
