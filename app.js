@@ -461,6 +461,9 @@ function initSettings() {
     }
 
     function checkWorkDirectory() {
+        if (!('showDirectoryPicker' in window)) {
+            return; // Don't show snackbar on unsupported browsers like iOS
+        }
         const selected = localStorage.getItem('work-directory-selected') === 'true';
         if (!selected) {
             const snackbar = document.getElementById('snackbar');
