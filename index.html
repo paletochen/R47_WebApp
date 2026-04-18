@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>R47 Calculator</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="favicon.png">
     <!-- Fonts will be loaded from local folder -->
@@ -317,6 +318,15 @@
     </div>
 
     <script>
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((reg) => console.log('Service Worker: Registered'))
+                    .catch((err) => console.log('Service Worker: Error:', err));
+            });
+        }
+
         function uploadFileToHost(filepath, filename) {
             const data = Module.FS.readFile(filepath);
             fetch(filename, {
