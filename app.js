@@ -368,6 +368,23 @@ function initSettings() {
         }
     });
 
+    // File I/O actions
+    const uploadBtn = document.getElementById('upload-file-btn');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            window.uploadFileToFS();
+        });
+    }
+    
+    const downloadBtn = document.getElementById('download-file-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            window.downloadFileFromFS("/persistent/c47_program.p47", "program.p47");
+        });
+    }
+
     // Clipboard actions
     document.getElementById('copy-x-btn').addEventListener('click', async () => {
         clipModal.style.display = 'none';
