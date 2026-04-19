@@ -210,29 +210,21 @@ body {
 
 @media (max-width: 500px) {
     .simulator-frame {
-        padding: 5px; /* Reduced padding */
-        max-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        overflow: hidden;
+        padding: 10px;
     }
     .keyboard-grid {
         padding: 5px;
-        gap: 2px 4px;
-        flex: 1; /* Take available space */
-        overflow-y: auto; /* Allow scrolling within keyboard if needed */
+        gap: 2px 4px; /* Reduced gap on small screens */
     }
     .btn {
-        padding: 1px 0; /* Reduced padding */
-        font-size: 0.9rem;
-        min-height: 20px; /* Reduced min-height */
+        padding: 2px 0; /* Reduced padding on small screens */
+        font-size: 1rem; /* Reduced font size */
     }
     .lbl {
-        font-size: 0.7rem; /* Reduced font size */
+        font-size: 0.8rem; /* Reduced label font size */
     }
     .alpha {
-        font-size: 0.7rem; /* Reduced font size */
+        font-size: 0.8rem; /* Reduced alpha font size */
     }
 }
 
