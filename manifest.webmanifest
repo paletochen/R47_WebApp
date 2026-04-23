@@ -1,0 +1,19 @@
+{
+  "name": "R47 Web Calculator",
+  "short_name": "R47",
+  "description": "In-browser RPN scientific and programmable calculator. 47-digit precision, matrices, statistics, programs — inspired by the HP-42S and Swiss Micros DM42.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2B2A29",
+  "theme_color": "#2B2A29",
+  "icons": [
+    { "src": "static/icons/icon-32.png", "sizes": "32x32", "type": "image/png", "purpose": "any" },
+    { "src": "static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+
+
+}

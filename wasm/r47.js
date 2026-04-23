@@ -1,3 +1,16 @@
+// This code implements the `-sMODULARIZE` settings by taking the generated
+// JS program code (INNER_JS_CODE) and wrapping it in a factory function.
+
+// Single threaded MINIMAL_RUNTIME programs do not need access to
+// document.currentScript, so a simple export declaration is enough.
+var R47Module = (() => {
+  // When MODULARIZE this JS may be executed later,
+  // after document.currentScript is gone, so we save it.
+  // In EXPORT_ES6 mode we can just use 'import.meta.url'.
+  var _scriptName = globalThis.document?.currentScript?.src;
+  return async function(moduleArg = {}) {
+    var moduleRtn;
+
 // include: shell.js
 // include: minimum_runtime_check.js
 (function() {
@@ -56,7 +69,7 @@
 // after the generated code, you will need to define   var Module = {};
 // before the code. Then that object will be used in the code, and you
 // can continue to use Module afterwards as well.
-var Module = typeof Module != 'undefined' ? Module : {};
+var Module = moduleArg;
 
 // Determine the runtime environment we are in. You can customize this by
 // setting the ENVIRONMENT setting at compile time (see settings.js).
@@ -78,10 +91,6 @@ var thisProgram = './this.program';
 var quit_ = (status, toThrow) => {
   throw toThrow;
 };
-
-// In MODULARIZE mode _scriptName needs to be captured already at the very top of the page immediately when the page is parsed, so it is generated there
-// before the page load. In non-MODULARIZE modes generate it here.
-var _scriptName = globalThis.document?.currentScript?.src;
 
 if (typeof __filename != 'undefined') { // Node
   _scriptName = __filename;
@@ -134,11 +143,6 @@ readAsync = async (filename, binary = true) => {
   }
 
   arguments_ = process.argv.slice(2);
-
-  // MODULARIZE will export the module in the proper place outside, we don't need to export here
-  if (typeof module != 'undefined') {
-    module['exports'] = Module;
-  }
 
   quit_ = (status, toThrow) => {
     process.exitCode = status;
@@ -383,53 +387,7 @@ function isExportedByForceFilesystem(name) {
          name === 'removeRunDependency';
 }
 
-/**
- * Intercept access to a symbols in the global symbol.  This enables us to give
- * informative warnings/errors when folks attempt to use symbols they did not
- * include in their build, or no symbols that no longer exist.
- *
- * We don't define this in MODULARIZE mode since in that mode emscripten symbols
- * are never placed in the global scope.
- */
-function hookGlobalSymbolAccess(sym, func) {
-  if (!Object.getOwnPropertyDescriptor(globalThis, sym)) {
-    Object.defineProperty(globalThis, sym, {
-      configurable: true,
-      get() {
-        func();
-        return undefined;
-      }
-    });
-  }
-}
-
-function missingGlobal(sym, msg) {
-  hookGlobalSymbolAccess(sym, () => {
-    warnOnce(`\`${sym}\` is no longer defined by emscripten. ${msg}`);
-  });
-}
-
-missingGlobal('buffer', 'Please use HEAP8.buffer or wasmMemory.buffer');
-missingGlobal('asm', 'Please use wasmExports instead');
-
 function missingLibrarySymbol(sym) {
-  hookGlobalSymbolAccess(sym, () => {
-    // Can't `abort()` here because it would break code that does runtime
-    // checks.  e.g. `if (typeof SDL === 'undefined')`.
-    var msg = `\`${sym}\` is a library symbol and not included by default; add it to your library.js __deps or to DEFAULT_LIBRARY_FUNCS_TO_INCLUDE on the command line`;
-    // DEFAULT_LIBRARY_FUNCS_TO_INCLUDE requires the name as it appears in
-    // library.js, which means $name for a JS name with no prefix, or name
-    // for a JS name like _name.
-    var librarySymbol = sym;
-    if (!librarySymbol.startsWith('_')) {
-      librarySymbol = '$' + sym;
-    }
-    msg += ` (e.g. -sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE='${librarySymbol}')`;
-    if (isExportedByForceFilesystem(sym)) {
-      msg += '. Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you';
-    }
-    warnOnce(msg);
-  });
 
   // Any symbol that is not included from the JS library is also (by definition)
   // not exported on the Module object.
@@ -452,6 +410,8 @@ function unexportedRuntimeSymbol(sym) {
 }
 
 // end include: runtime_debug.js
+var readyPromiseResolve, readyPromiseReject;
+
 // Memory management
 
 var runtimeInitialized = false;
@@ -509,6 +469,11 @@ TTY.init();
   // End ATPOSTCTORS hooks
 }
 
+function preMain() {
+  checkStackCookie();
+  // No ATMAINS hooks
+}
+
 function postRun() {
   checkStackCookie();
    // PThreads reuse the runtime from the main thread.
@@ -559,6 +524,7 @@ function abort(what) {
   /** @suppress {checkTypes} */
   var e = new WebAssembly.RuntimeError(what);
 
+  readyPromiseReject?.(e);
   // Throw the error whether or not MODULARIZE is set because abort is used
   // in code paths apart from instantiation where an exception is expected
   // to be thrown when abort is called.
@@ -682,10 +648,8 @@ async function createWasm() {
 
     updateMemoryViews();
 
-    removeRunDependency('wasm-instantiate');
     return wasmExports;
   }
-  addRunDependency('wasm-instantiate');
 
   // Prefer streaming instantiation if available.
   // Async compilation can be confusing when an error on the page overwrites Module
@@ -784,71 +748,6 @@ async function createWasm() {
   var onPreRuns = [];
   var addOnPreRun = (cb) => onPreRuns.push(cb);
 
-  var runDependencies = 0;
-  
-  
-  var dependenciesFulfilled = null;
-  
-  var runDependencyTracking = {
-  };
-  
-  var runDependencyWatcher = null;
-  var removeRunDependency = (id) => {
-      runDependencies--;
-  
-      Module['monitorRunDependencies']?.(runDependencies);
-  
-      assert(id, 'removeRunDependency requires an ID');
-      assert(runDependencyTracking[id]);
-      delete runDependencyTracking[id];
-      if (runDependencies == 0) {
-        if (runDependencyWatcher !== null) {
-          clearInterval(runDependencyWatcher);
-          runDependencyWatcher = null;
-        }
-        if (dependenciesFulfilled) {
-          var callback = dependenciesFulfilled;
-          dependenciesFulfilled = null;
-          callback(); // can add another dependenciesFulfilled
-        }
-      }
-    };
-  
-  
-  var addRunDependency = (id) => {
-      runDependencies++;
-  
-      Module['monitorRunDependencies']?.(runDependencies);
-  
-      assert(id, 'addRunDependency requires an ID')
-      assert(!runDependencyTracking[id]);
-      runDependencyTracking[id] = 1;
-      if (runDependencyWatcher === null && globalThis.setInterval) {
-        // Check for missing dependencies every few seconds
-        runDependencyWatcher = setInterval(() => {
-          if (ABORT) {
-            clearInterval(runDependencyWatcher);
-            runDependencyWatcher = null;
-            return;
-          }
-          var shown = false;
-          for (var dep in runDependencyTracking) {
-            if (!shown) {
-              shown = true;
-              err('still waiting on run dependencies:');
-            }
-            err(`dependency: ${dep}`);
-          }
-          if (shown) {
-            err('(end of list)');
-          }
-        }, 10000);
-        // Prevent this timer from keeping the runtime alive if nothing
-        // else is.
-        runDependencyWatcher.unref?.()
-      }
-    };
-
 
   var dynCalls = {
   };
@@ -906,7 +805,6 @@ async function createWasm() {
       ptr >>>= 0;
       return '0x' + ptr.toString(16).padStart(8, '0');
     }
-
 
   
     /**
@@ -1026,16 +924,6 @@ async function createWasm() {
 
   var ___call_sighandler = (fp, sig) => ((a1) => dynCall_vi(fp, a1))(sig);
 
-  var syscallGetVarargI = () => {
-      assert(SYSCALLS.varargs != undefined);
-      // the `+` prepended here is necessary to convince the JSCompiler that varargs is indeed a number.
-      var ret = HEAP32[((+SYSCALLS.varargs)>>2)];
-      SYSCALLS.varargs += 4;
-      return ret;
-    };
-  var syscallGetVarargP = syscallGetVarargI;
-  
-  
   var PATH = {
   isAbs:(path) => path.charAt(0) === '/',
   splitPath:(filename) => {
@@ -2287,6 +2175,70 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
       }
     };
   
+  var runDependencies = 0;
+  
+  
+  var dependenciesFulfilled = null;
+  
+  var runDependencyTracking = {
+  };
+  
+  var runDependencyWatcher = null;
+  var removeRunDependency = (id) => {
+      runDependencies--;
+  
+      Module['monitorRunDependencies']?.(runDependencies);
+  
+      assert(id, 'removeRunDependency requires an ID');
+      assert(runDependencyTracking[id]);
+      delete runDependencyTracking[id];
+      if (runDependencies == 0) {
+        if (runDependencyWatcher !== null) {
+          clearInterval(runDependencyWatcher);
+          runDependencyWatcher = null;
+        }
+        if (dependenciesFulfilled) {
+          var callback = dependenciesFulfilled;
+          dependenciesFulfilled = null;
+          callback(); // can add another dependenciesFulfilled
+        }
+      }
+    };
+  
+  
+  var addRunDependency = (id) => {
+      runDependencies++;
+  
+      Module['monitorRunDependencies']?.(runDependencies);
+  
+      assert(id, 'addRunDependency requires an ID')
+      assert(!runDependencyTracking[id]);
+      runDependencyTracking[id] = 1;
+      if (runDependencyWatcher === null && globalThis.setInterval) {
+        // Check for missing dependencies every few seconds
+        runDependencyWatcher = setInterval(() => {
+          if (ABORT) {
+            clearInterval(runDependencyWatcher);
+            runDependencyWatcher = null;
+            return;
+          }
+          var shown = false;
+          for (var dep in runDependencyTracking) {
+            if (!shown) {
+              shown = true;
+              err('still waiting on run dependencies:');
+            }
+            err(`dependency: ${dep}`);
+          }
+          if (shown) {
+            err('(end of list)');
+          }
+        }, 10000);
+        // Prevent this timer from keeping the runtime alive if nothing
+        // else is.
+        runDependencyWatcher.unref?.()
+      }
+    };
   
   
   var preloadPlugins = [];
@@ -4033,6 +3985,29 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
         return ret;
       },
   };
+  function ___syscall_chdir(path) {
+  try {
+  
+      path = SYSCALLS.getStr(path);
+      FS.chdir(path);
+      return 0;
+    } catch (e) {
+    if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+    return -e.errno;
+  }
+  }
+  
+
+  var syscallGetVarargI = () => {
+      assert(SYSCALLS.varargs != undefined);
+      // the `+` prepended here is necessary to convince the JSCompiler that varargs is indeed a number.
+      var ret = HEAP32[((+SYSCALLS.varargs)>>2)];
+      SYSCALLS.varargs += 4;
+      return ret;
+    };
+  var syscallGetVarargP = syscallGetVarargI;
+  
+  
   function ___syscall_fcntl64(fd, cmd, varargs) {
   SYSCALLS.varargs = varargs;
   try {
@@ -4077,6 +4052,82 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
           return 0;
       }
       return -28;
+    } catch (e) {
+    if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+    return -e.errno;
+  }
+  }
+  
+
+  function ___syscall_fstat64(fd, buf) {
+  try {
+  
+      return SYSCALLS.writeStat(buf, FS.fstat(fd));
+    } catch (e) {
+    if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+    return -e.errno;
+  }
+  }
+  
+
+  var stringToUTF8 = (str, outPtr, maxBytesToWrite) => {
+      assert(typeof maxBytesToWrite == 'number', 'stringToUTF8(str, outPtr, maxBytesToWrite) is missing the third parameter that specifies the length of the output buffer!');
+      return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
+    };
+  
+  function ___syscall_getdents64(fd, dirp, count) {
+  try {
+  
+      var stream = SYSCALLS.getStreamFromFD(fd)
+      stream.getdents ||= FS.readdir(stream.path);
+  
+      var struct_size = 280;
+      var pos = 0;
+      var off = FS.llseek(stream, 0, 1);
+  
+      var startIdx = Math.floor(off / struct_size);
+      var endIdx = Math.min(stream.getdents.length, startIdx + Math.floor(count/struct_size))
+      for (var idx = startIdx; idx < endIdx; idx++) {
+        var id;
+        var type;
+        var name = stream.getdents[idx];
+        if (name === '.') {
+          id = stream.node.id;
+          type = 4;
+        }
+        else if (name === '..') {
+          var lookup = FS.lookupPath(stream.path, { parent: true });
+          id = lookup.node.id;
+          type = 4;
+        }
+        else {
+          var child;
+          try {
+            child = FS.lookupNode(stream.node, name);
+          } catch (e) {
+            // If the entry is not a directory, file, or symlink, nodefs
+            // lookupNode will raise EINVAL. Skip these and continue.
+            if (e?.errno === 28) {
+              continue;
+            }
+            throw e;
+          }
+          id = child.id;
+          type = FS.isChrdev(child.mode) ? 2 : // character device.
+                 FS.isDir(child.mode) ? 4 :    // directory
+                 FS.isLink(child.mode) ? 10 :   // symbolic link.
+                 8;                            // regular file.
+        }
+        assert(id);
+        HEAP64[((dirp + pos)>>3)] = BigInt(id);
+        HEAP64[(((dirp + pos)+(8))>>3)] = BigInt((idx + 1) * struct_size);
+        HEAP16[(((dirp + pos)+(16))>>1)] = 280;
+        HEAP8[(dirp + pos)+(18)] = type;
+        stringToUTF8(name, dirp + pos + 19, 256);
+        pos += struct_size;
+      }
+      FS.llseek(stream, idx * struct_size, 0);
+      return pos;
     } catch (e) {
     if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
     return -e.errno;
@@ -4182,6 +4233,49 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
   }
   
 
+  function ___syscall_lstat64(path, buf) {
+  try {
+  
+      path = SYSCALLS.getStr(path);
+      return SYSCALLS.writeStat(buf, FS.lstat(path));
+    } catch (e) {
+    if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+    return -e.errno;
+  }
+  }
+  
+
+  function ___syscall_mkdirat(dirfd, path, mode) {
+  try {
+  
+      path = SYSCALLS.getStr(path);
+      path = SYSCALLS.calculateAt(dirfd, path);
+      FS.mkdir(path, mode, 0);
+      return 0;
+    } catch (e) {
+    if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+    return -e.errno;
+  }
+  }
+  
+
+  function ___syscall_newfstatat(dirfd, path, buf, flags) {
+  try {
+  
+      path = SYSCALLS.getStr(path);
+      var nofollow = flags & 256;
+      var allowEmpty = flags & 4096;
+      flags = flags & (~6400);
+      assert(!flags, `unknown flags in __syscall_newfstatat: ${flags}`);
+      path = SYSCALLS.calculateAt(dirfd, path, allowEmpty);
+      return SYSCALLS.writeStat(buf, nofollow ? FS.lstat(path) : FS.stat(path));
+    } catch (e) {
+    if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+    return -e.errno;
+  }
+  }
+  
+
   
   function ___syscall_openat(dirfd, path, flags, varargs) {
   SYSCALLS.varargs = varargs;
@@ -4204,6 +4298,18 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
       path = SYSCALLS.getStr(path);
       FS.rmdir(path);
       return 0;
+    } catch (e) {
+    if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+    return -e.errno;
+  }
+  }
+  
+
+  function ___syscall_stat64(path, buf) {
+  try {
+  
+      path = SYSCALLS.getStr(path);
+      return SYSCALLS.writeStat(buf, FS.stat(path));
     } catch (e) {
     if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
     return -e.errno;
@@ -4283,10 +4389,6 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
     ;
   }
 
-  var stringToUTF8 = (str, outPtr, maxBytesToWrite) => {
-      assert(typeof maxBytesToWrite == 'number', 'stringToUTF8(str, outPtr, maxBytesToWrite) is missing the third parameter that specifies the length of the output buffer!');
-      return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
-    };
   
   var __tzset_js = (timezone, daylight, std_name, dst_name) => {
       // TODO: Use (malleable) environment variables instead of system settings.
@@ -4494,6 +4596,7 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
       // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
       if (keepRuntimeAlive() && !implicit) {
         var msg = `program exited (with status: ${status}), but keepRuntimeAlive() is set (counter=${runtimeKeepaliveCounter}) due to an async operation, so halting execution but not exiting the runtime or preventing further async execution (you can use emscripten_force_exit, if you want to force a true shutdown)`;
+        readyPromiseReject?.(msg);
         err(msg);
       }
   
@@ -4603,14 +4706,6 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
 
 
 
-  var runAndAbortIfError = (func) => {
-      try {
-        return func();
-      } catch (e) {
-        abort(e);
-      }
-    };
-  
   var handleException = (e) => {
       // Certain exception types we do not treat as errors since they are used for
       // internal control flow.
@@ -4628,6 +4723,16 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
       }
       quit_(1, e);
     };
+
+
+  var runAndAbortIfError = (func) => {
+      try {
+        return func();
+      } catch (e) {
+        abort(e);
+      }
+    };
+  
   
   
   
@@ -4668,7 +4773,7 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
   
   var Asyncify = {
   instrumentWasmImports(imports) {
-        var importPattern = /^(web_load_file|web_save_file|_Buzz|invoke_.*|__asyncjs__.*)$/;
+        var importPattern = /^(invoke_.*|__asyncjs__.*)$/;
   
         for (let [x, original] of Object.entries(imports)) {
           if (typeof original == 'function') {
@@ -5039,6 +5144,7 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
 
 
 
+
   var FS_createPath = (...args) => FS.createPath(...args);
 
 
@@ -5113,6 +5219,7 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
   Module['FS'] = FS;
   Module['FS_createDataFile'] = FS_createDataFile;
   Module['FS_createLazyFile'] = FS_createLazyFile;
+  Module['IDBFS'] = IDBFS;
   var missingLibrarySymbols = [
   'writeI53ToI64',
   'writeI53ToI64Clamped',
@@ -5503,7 +5610,6 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'print',
   'printErr',
   'jstoi_s',
-  'IDBFS',
 ];
 unexportedSymbols.forEach(unexportedRuntimeSymbol);
 
@@ -5523,36 +5629,80 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('onSbrkGrow');
 }
 var ASM_CONSTS = {
-  397780: () => { const forceClose = localStorage.getItem('force-close-exit') === 'true'; if (forceClose) { console.log("Force Close triggered"); window.location.href = "about:blank"; } else { console.log("Minimize triggered"); const app = document.getElementById('app'); if (app) { app.style.display = 'none'; const restoreBtn = document.createElement('button'); restoreBtn.innerText = "Restore R47"; restoreBtn.style.position = 'fixed'; restoreBtn.style.bottom = '10px'; restoreBtn.style.right = '10px'; restoreBtn.style.zIndex = 2000; restoreBtn.style.padding = '10px'; restoreBtn.style.background = '#2a2a2a'; restoreBtn.style.color = 'white'; restoreBtn.style.border = '1px solid #888'; restoreBtn.style.borderRadius = '4px'; restoreBtn.style.cursor = 'pointer'; restoreBtn.onclick = () => { app.style.display = 'flex'; restoreBtn.remove(); }; document.body.appendChild(restoreBtn); } } },  
- 398654: () => { Module.FS.syncfs(false, function (err) { if (err) console.error("Error saving to IDBFS:", err); }); },  
- 398754: ($0) => { uploadFileToHost('/persistent/c47_snap.bmp', UTF8ToString($0)); }
+  396212: ($0) => { if(window.r47RequestFamilyReload) { window.r47RequestFamilyReload($0); } },  
+ 396289: ($0) => { if (typeof window !== 'undefined' && window.r47Printer) { window.r47Printer.write(UTF8ToString($0)); } },  
+ 396396: ($0) => { if (window.onFileSaved) window.onFileSaved(UTF8ToString($0)); },  
+ 396462: () => { if (typeof FS !== 'undefined' && FS.syncfs) { FS.syncfs(false, function(err) { if (err) console.warn('FS.syncfs after unlink failed:', err); }); } },  
+ 396613: ($0) => { if (typeof window !== 'undefined' && window.r47Warn) { window.r47Warn(UTF8ToString($0)); } else { console.warn(UTF8ToString($0)); } },  
+ 396749: ($0) => { if (window.r47RequestFile) window.r47RequestFile(UTF8ToString($0)); },  
+ 396821: () => { if (typeof FS !== 'undefined' && FS.syncfs) { FS.syncfs(false, function(e) { if (e) console.warn('seed syncfs failed:', e); }); } },  
+ 396955: () => { return !('showSaveFilePicker' in window); },  
+ 397001: ($0, $1) => { const frequency = $0; const ms_delay = $1; if (!window.toneQueue) { window.toneQueue = []; window.isPlayingTone = false; } window.toneQueue.push({ freq: frequency, ms: ms_delay }); function playNext() { if (window.toneQueue.length === 0) { window.isPlayingTone = false; return; } window.isPlayingTone = true; const tone = window.toneQueue.shift(); if (Module.isBeeperEnabled === false) { setTimeout(playNext, 10); return; } if (!window.audioCtx) { window.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } if (window.audioCtx.state === 'suspended') { window.audioCtx.resume(); } const oscillator = window.audioCtx.createOscillator(); const gainNode = window.audioCtx.createGain(); oscillator.type = 'square'; oscillator.frequency.setValueAtTime(tone.freq / 1000, window.audioCtx.currentTime); const volume = (Module.beeperVolume || 50) / 100; gainNode.gain.setValueAtTime(volume, window.audioCtx.currentTime); oscillator.connect(gainNode); gainNode.connect(window.audioCtx.destination); oscillator.start(); setTimeout(playNext, 270); setTimeout(() => { oscillator.stop(); oscillator.disconnect(); gainNode.disconnect(); }, tone.ms); } if (!window.isPlayingTone) { playNext(); } }
 };
-function web_save_file(filepath,suggestedName) { return Asyncify.handleAsync(async () => { try { const pathStr = UTF8ToString(filepath); let folderName = 'PROGRAMS'; if (pathStr.includes('state') || pathStr.includes('s47')) { folderName = 'STATE'; } else if (pathStr.includes('snap') || pathStr.includes('bmp')) { folderName = 'SCREENS'; } const workDir = window.workDirHandle; let startInDir = undefined; if (workDir) { try { startInDir = await workDir.getDirectoryHandle(folderName); } catch (e) { console.warn(`Failed to get directory handle for ${folderName}:`, e.message); } } const handle = await window.showSaveFilePicker({ suggestedName: UTF8ToString(suggestedName), types: [{ description: 'R47 Files', accept: { 'application/octet-stream': ['.s47', '.p47'] } }], startIn: startInDir }); const writable = await handle.createWritable(); const data = Module.FS.readFile(UTF8ToString(filepath)); await writable.write(data); await writable.close(); console.log("File saved via FSA API"); Module.FS.syncfs(false, function (err) { if (err) console.error("IDBFS sync failed:", err); else console.log("IDBFS synced to IndexedDB"); }); } catch (err) { console.error("Save file failed:", err); } }); }
-function web_load_file(filepath) { return Asyncify.handleAsync(async () => { try { const pathStr = UTF8ToString(filepath); let folderName = 'PROGRAMS'; if (pathStr.includes('state') || pathStr.includes('s47')) { folderName = 'STATE'; } const workDir = window.workDirHandle; let startInDir = undefined; if (workDir) { try { startInDir = await workDir.getDirectoryHandle(folderName); } catch (e) { console.warn(`Failed to get directory handle for ${folderName}:`, e.message); } } const [handle] = await window.showOpenFilePicker({ types: [{ description: 'R47 Files', accept: { 'application/octet-stream': ['.s47', '.p47'] } }], multiple: false, startIn: startInDir }); const file = await handle.getFile(); const buffer = await file.arrayBuffer(); const data = new Uint8Array(buffer); Module.FS.writeFile(UTF8ToString(filepath), data); console.log("File loaded via FSA API"); } catch (err) { console.error("Load file failed:", err); } }); }
-function _Buzz(frequency,ms_delay) { return Asyncify.handleAsync(async () => { if (window.isBeeperEnabled === false) return; if (!window.audioCtx) { window.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } if (window.audioCtx.state === 'suspended') { await window.audioCtx.resume(); } const oscillator = window.audioCtx.createOscillator(); const gainNode = window.audioCtx.createGain(); oscillator.type = 'square'; oscillator.frequency.setValueAtTime(frequency / 1000, window.audioCtx.currentTime); const volume = (window.beeperVolume || 20) / 100 * 0.2; gainNode.gain.setValueAtTime(0, window.audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(volume, window.audioCtx.currentTime + 0.002); gainNode.gain.setValueAtTime(volume, window.audioCtx.currentTime + ms_delay / 1000 - 0.002); gainNode.gain.linearRampToValueAtTime(0, window.audioCtx.currentTime + ms_delay / 1000); oscillator.connect(gainNode); gainNode.connect(window.audioCtx.destination); oscillator.start(); await new Promise(resolve => setTimeout(resolve, ms_delay)); oscillator.stop(); oscillator.disconnect(); gainNode.disconnect(); }); }
-function __asyncjs__js_writeSnapFile(buffer,size) { return Asyncify.handleAsync(async () => { try { const handle = window._snapFileHandle; if (!handle) { console.error('No file handle for SNAP'); return; } const writable = await handle.createWritable(); const data = new Uint8Array(Module.HEAPU8.buffer, buffer, size); await writable.write(data); await writable.close(); console.log('SNAP file written successfully'); } catch (e) { console.error('Failed to write SNAP file:', e); } }); }
-function __asyncjs__js_openSnapFile() { return Asyncify.handleAsync(async () => { try { const handle = await window.showSaveFilePicker({ suggestedName: 'SNAP.bmp', types: [{ description: 'BMP Image', accept: {'image/bmp': ['.bmp']}, }], }); window._snapFileHandle = handle; return 1; } catch (e) { if (e.name === 'AbortError') { return 2; } console.error('Failed to pick file:', e); return 0; } }); }
+function web_save_file(filepath,suggestedName) { Asyncify.handleAsync(async () => { try { const handle = await window.showSaveFilePicker({ suggestedName: UTF8ToString(suggestedName), types: [{ description: 'R47 Files', accept: { 'application/octet-stream': ['.s47', '.p47'] } }] }); const writable = await handle.createWritable(); const data = Module.FS.readFile(UTF8ToString(filepath)); await writable.write(data); await writable.close(); console.log("File saved via FSA API"); } catch (err) { console.error("Save file failed:", err); } }); }
+function web_load_file(filepath) { Asyncify.handleAsync(async () => { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'R47 Files', accept: { 'application/octet-stream': ['.s47', '.p47'] } }], multiple: false }); const file = await handle.getFile(); const buffer = await file.arrayBuffer(); const data = new Uint8Array(buffer); Module.FS.writeFile(UTF8ToString(filepath), data); console.log("File loaded via FSA API"); } catch (err) { console.error("Load file failed:", err); } }); }
+function __asyncjs__js_openSnapFile(suggestedName) { return Asyncify.handleAsync(async () => { try { const name = UTF8ToString(suggestedName); const subHandle = await window.getSubfolderHandle('SCREENS'); const handle = await window.showSaveFilePicker({ startIn: subHandle, suggestedName: name, types: [{ description: 'BMP Image', accept: {'image/bmp': ['.bmp']}, }], }); window._snapFileHandle = handle; return 1; } catch (e) { if (e.name === 'AbortError') { return 2; } console.error('Failed to pick file:', e); return 0; } }); }
+function __asyncjs__js_saveInterceptedFile(filename) { return Asyncify.handleAsync(async () => { try { const name = UTF8ToString(filename); console.log("File ready in virtual FS:", name); try { const subHandle = await window.getSubfolderHandle('SCREENS'); const handle = await window.showSaveFilePicker({ startIn: subHandle, suggestedName: name, types: [{ description: 'BMP Image', accept: {'image/bmp': ['.bmp']}, }], }); const writable = await handle.createWritable(); const data = Module.FS.readFile(name); await writable.write(data); await writable.close(); console.log('SNAP file written successfully'); Module.FS.unlink(name); } catch (e) { if (e.name !== 'AbortError') { console.error('Failed to save SNAP file:', e); } } } catch (e) { console.error('Error in js_saveInterceptedFile:', e); } }); }
 
 // Imports from the Wasm binary.
 var _fflush = makeInvalidEarlyAccess('_fflush');
 var _saveCalc = Module['_saveCalc'] = makeInvalidEarlyAccess('_saveCalc');
 var _malloc = makeInvalidEarlyAccess('_malloc');
 var _free = makeInvalidEarlyAccess('_free');
+var _fnClAll = Module['_fnClAll'] = makeInvalidEarlyAccess('_fnClAll');
+var _refreshLcd = Module['_refreshLcd'] = makeInvalidEarlyAccess('_refreshLcd');
+var _refreshTimer = Module['_refreshTimer'] = makeInvalidEarlyAccess('_refreshTimer');
+var _r47_hello = Module['_r47_hello'] = makeInvalidEarlyAccess('_r47_hello');
+var _r47_init = Module['_r47_init'] = makeInvalidEarlyAccess('_r47_init');
+var _r47_screen_ptr = Module['_r47_screen_ptr'] = makeInvalidEarlyAccess('_r47_screen_ptr');
+var _r47_screen_stride = Module['_r47_screen_stride'] = makeInvalidEarlyAccess('_r47_screen_stride');
+var _r47_fn_key = Module['_r47_fn_key'] = makeInvalidEarlyAccess('_r47_fn_key');
+var _r47_key = Module['_r47_key'] = makeInvalidEarlyAccess('_r47_key');
+var _r47_tick = Module['_r47_tick'] = makeInvalidEarlyAccess('_r47_tick');
+var _wasm_tick_timers = Module['_wasm_tick_timers'] = makeInvalidEarlyAccess('_wasm_tick_timers');
+var _r47_get_calc_mode = Module['_r47_get_calc_mode'] = makeInvalidEarlyAccess('_r47_get_calc_mode');
+var _r47_flag_browser_screen = Module['_r47_flag_browser_screen'] = makeInvalidEarlyAccess('_r47_flag_browser_screen');
+var _r47_get_scr_upd_mode = Module['_r47_get_scr_upd_mode'] = makeInvalidEarlyAccess('_r47_get_scr_upd_mode');
+var _r47_set_scr_upd_mode = Module['_r47_set_scr_upd_mode'] = makeInvalidEarlyAccess('_r47_set_scr_upd_mode');
+var _r47_force_refresh = Module['_r47_force_refresh'] = makeInvalidEarlyAccess('_r47_force_refresh');
+var _r47_key_label = Module['_r47_key_label'] = makeInvalidEarlyAccess('_r47_key_label');
+var _r47_user_mode = Module['_r47_user_mode'] = makeInvalidEarlyAccess('_r47_user_mode');
+var _r47_calc_model = Module['_r47_calc_model'] = makeInvalidEarlyAccess('_r47_calc_model');
+var _r47_key_shift_type = Module['_r47_key_shift_type'] = makeInvalidEarlyAccess('_r47_key_shift_type');
+var _r47_is_r47_family = Module['_r47_is_r47_family'] = makeInvalidEarlyAccess('_r47_is_r47_family');
+var _r47_shift_state = Module['_r47_shift_state'] = makeInvalidEarlyAccess('_r47_shift_state');
+var _r47_build_date = Module['_r47_build_date'] = makeInvalidEarlyAccess('_r47_build_date');
+var _r47_set_calc_model = Module['_r47_set_calc_model'] = makeInvalidEarlyAccess('_r47_set_calc_model');
+var _r47_softkey_label = Module['_r47_softkey_label'] = makeInvalidEarlyAccess('_r47_softkey_label');
+var _r47_menu_id = Module['_r47_menu_id'] = makeInvalidEarlyAccess('_r47_menu_id');
+var _r47_softmenu_offset = Module['_r47_softmenu_offset'] = makeInvalidEarlyAccess('_r47_softmenu_offset');
+var _r47_x_display = Module['_r47_x_display'] = makeInvalidEarlyAccess('_r47_x_display');
+var _r47_load_program_named = Module['_r47_load_program_named'] = makeInvalidEarlyAccess('_r47_load_program_named');
+var _r47_set_save_name = Module['_r47_set_save_name'] = makeInvalidEarlyAccess('_r47_set_save_name');
+var _r47_save_program_named = Module['_r47_save_program_named'] = makeInvalidEarlyAccess('_r47_save_program_named');
+var _r47_export_rtf_program_named = Module['_r47_export_rtf_program_named'] = makeInvalidEarlyAccess('_r47_export_rtf_program_named');
+var _r47_save_state_named = Module['_r47_save_state_named'] = makeInvalidEarlyAccess('_r47_save_state_named');
+var _r47_load_state_named = Module['_r47_load_state_named'] = makeInvalidEarlyAccess('_r47_load_state_named');
+var _r47_load_savfile_named = Module['_r47_load_savfile_named'] = makeInvalidEarlyAccess('_r47_load_savfile_named');
+var _r47_save_calc = Module['_r47_save_calc'] = makeInvalidEarlyAccess('_r47_save_calc');
+var _r47_delete_program_by_label = Module['_r47_delete_program_by_label'] = makeInvalidEarlyAccess('_r47_delete_program_by_label');
+var _r47_delete_all_programs = Module['_r47_delete_all_programs'] = makeInvalidEarlyAccess('_r47_delete_all_programs');
+var _r47_number_of_programs = Module['_r47_number_of_programs'] = makeInvalidEarlyAccess('_r47_number_of_programs');
+var _r47_current_program_number = Module['_r47_current_program_number'] = makeInvalidEarlyAccess('_r47_current_program_number');
+var _r47_set_current_program = Module['_r47_set_current_program'] = makeInvalidEarlyAccess('_r47_set_current_program');
+var _r47_program_label_at = Module['_r47_program_label_at'] = makeInvalidEarlyAccess('_r47_program_label_at');
+var _r47_delete_program_by_name = Module['_r47_delete_program_by_name'] = makeInvalidEarlyAccess('_r47_delete_program_by_name');
+var _r47_get_flag = Module['_r47_get_flag'] = makeInvalidEarlyAccess('_r47_get_flag');
+var _main = Module['_main'] = makeInvalidEarlyAccess('_main');
+var _r47_stage_upload = Module['_r47_stage_upload'] = makeInvalidEarlyAccess('_r47_stage_upload');
+var _getSnapBufferPtr = Module['_getSnapBufferPtr'] = makeInvalidEarlyAccess('_getSnapBufferPtr');
+var _getSnapBufferSize = Module['_getSnapBufferSize'] = makeInvalidEarlyAccess('_getSnapBufferSize');
 var _init_lcd_buffers = Module['_init_lcd_buffers'] = makeInvalidEarlyAccess('_init_lcd_buffers');
 var _getScreenDataPtr = Module['_getScreenDataPtr'] = makeInvalidEarlyAccess('_getScreenDataPtr');
 var _isScreenDirty = Module['_isScreenDirty'] = makeInvalidEarlyAccess('_isScreenDirty');
 var _web_init = Module['_web_init'] = makeInvalidEarlyAccess('_web_init');
 var _tick = Module['_tick'] = makeInvalidEarlyAccess('_tick');
-var _r47_set_save_name = Module['_r47_set_save_name'] = makeInvalidEarlyAccess('_r47_set_save_name');
 var _sendSimKeyNative = Module['_sendSimKeyNative'] = makeInvalidEarlyAccess('_sendSimKeyNative');
-var _getXRegisterString = Module['_getXRegisterString'] = makeInvalidEarlyAccess('_getXRegisterString');
-var _isAlphaMode = Module['_isAlphaMode'] = makeInvalidEarlyAccess('_isAlphaMode');
-var _getKeyLabelNative = Module['_getKeyLabelNative'] = makeInvalidEarlyAccess('_getKeyLabelNative');
-var _openHomeMenu = Module['_openHomeMenu'] = makeInvalidEarlyAccess('_openHomeMenu');
-var _openMyMenu = Module['_openMyMenu'] = makeInvalidEarlyAccess('_openMyMenu');
-var _getSnapBufferPtr = Module['_getSnapBufferPtr'] = makeInvalidEarlyAccess('_getSnapBufferPtr');
-var _getSnapBufferSize = Module['_getSnapBufferSize'] = makeInvalidEarlyAccess('_getSnapBufferSize');
-var _r47_save_program_named = Module['_r47_save_program_named'] = makeInvalidEarlyAccess('_r47_save_program_named');
 var _r47_snap_named = Module['_r47_snap_named'] = makeInvalidEarlyAccess('_r47_snap_named');
 var _isIoMenuOpen = Module['_isIoMenuOpen'] = makeInvalidEarlyAccess('_isIoMenuOpen');
 var _strerror = makeInvalidEarlyAccess('_strerror');
@@ -5565,10 +5715,10 @@ var __emscripten_stack_alloc = makeInvalidEarlyAccess('__emscripten_stack_alloc'
 var _emscripten_stack_get_current = makeInvalidEarlyAccess('_emscripten_stack_get_current');
 var dynCall_vi = makeInvalidEarlyAccess('dynCall_vi');
 var dynCall_ii = makeInvalidEarlyAccess('dynCall_ii');
+var dynCall_vii = makeInvalidEarlyAccess('dynCall_vii');
 var dynCall_iii = makeInvalidEarlyAccess('dynCall_iii');
 var dynCall_v = makeInvalidEarlyAccess('dynCall_v');
 var dynCall_viii = makeInvalidEarlyAccess('dynCall_viii');
-var dynCall_vii = makeInvalidEarlyAccess('dynCall_vii');
 var dynCall_viiii = makeInvalidEarlyAccess('dynCall_viiii');
 var dynCall_iiii = makeInvalidEarlyAccess('dynCall_iiii');
 var dynCall_jiji = makeInvalidEarlyAccess('dynCall_jiji');
@@ -5586,21 +5736,60 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['saveCalc'] != 'undefined', 'missing Wasm export: saveCalc');
   assert(typeof wasmExports['malloc'] != 'undefined', 'missing Wasm export: malloc');
   assert(typeof wasmExports['free'] != 'undefined', 'missing Wasm export: free');
+  assert(typeof wasmExports['fnClAll'] != 'undefined', 'missing Wasm export: fnClAll');
+  assert(typeof wasmExports['refreshLcd'] != 'undefined', 'missing Wasm export: refreshLcd');
+  assert(typeof wasmExports['refreshTimer'] != 'undefined', 'missing Wasm export: refreshTimer');
+  assert(typeof wasmExports['r47_hello'] != 'undefined', 'missing Wasm export: r47_hello');
+  assert(typeof wasmExports['r47_init'] != 'undefined', 'missing Wasm export: r47_init');
+  assert(typeof wasmExports['r47_screen_ptr'] != 'undefined', 'missing Wasm export: r47_screen_ptr');
+  assert(typeof wasmExports['r47_screen_stride'] != 'undefined', 'missing Wasm export: r47_screen_stride');
+  assert(typeof wasmExports['r47_fn_key'] != 'undefined', 'missing Wasm export: r47_fn_key');
+  assert(typeof wasmExports['r47_key'] != 'undefined', 'missing Wasm export: r47_key');
+  assert(typeof wasmExports['r47_tick'] != 'undefined', 'missing Wasm export: r47_tick');
+  assert(typeof wasmExports['wasm_tick_timers'] != 'undefined', 'missing Wasm export: wasm_tick_timers');
+  assert(typeof wasmExports['r47_get_calc_mode'] != 'undefined', 'missing Wasm export: r47_get_calc_mode');
+  assert(typeof wasmExports['r47_flag_browser_screen'] != 'undefined', 'missing Wasm export: r47_flag_browser_screen');
+  assert(typeof wasmExports['r47_get_scr_upd_mode'] != 'undefined', 'missing Wasm export: r47_get_scr_upd_mode');
+  assert(typeof wasmExports['r47_set_scr_upd_mode'] != 'undefined', 'missing Wasm export: r47_set_scr_upd_mode');
+  assert(typeof wasmExports['r47_force_refresh'] != 'undefined', 'missing Wasm export: r47_force_refresh');
+  assert(typeof wasmExports['r47_key_label'] != 'undefined', 'missing Wasm export: r47_key_label');
+  assert(typeof wasmExports['r47_user_mode'] != 'undefined', 'missing Wasm export: r47_user_mode');
+  assert(typeof wasmExports['r47_calc_model'] != 'undefined', 'missing Wasm export: r47_calc_model');
+  assert(typeof wasmExports['r47_key_shift_type'] != 'undefined', 'missing Wasm export: r47_key_shift_type');
+  assert(typeof wasmExports['r47_is_r47_family'] != 'undefined', 'missing Wasm export: r47_is_r47_family');
+  assert(typeof wasmExports['r47_shift_state'] != 'undefined', 'missing Wasm export: r47_shift_state');
+  assert(typeof wasmExports['r47_build_date'] != 'undefined', 'missing Wasm export: r47_build_date');
+  assert(typeof wasmExports['r47_set_calc_model'] != 'undefined', 'missing Wasm export: r47_set_calc_model');
+  assert(typeof wasmExports['r47_softkey_label'] != 'undefined', 'missing Wasm export: r47_softkey_label');
+  assert(typeof wasmExports['r47_menu_id'] != 'undefined', 'missing Wasm export: r47_menu_id');
+  assert(typeof wasmExports['r47_softmenu_offset'] != 'undefined', 'missing Wasm export: r47_softmenu_offset');
+  assert(typeof wasmExports['r47_x_display'] != 'undefined', 'missing Wasm export: r47_x_display');
+  assert(typeof wasmExports['r47_load_program_named'] != 'undefined', 'missing Wasm export: r47_load_program_named');
+  assert(typeof wasmExports['r47_set_save_name'] != 'undefined', 'missing Wasm export: r47_set_save_name');
+  assert(typeof wasmExports['r47_save_program_named'] != 'undefined', 'missing Wasm export: r47_save_program_named');
+  assert(typeof wasmExports['r47_export_rtf_program_named'] != 'undefined', 'missing Wasm export: r47_export_rtf_program_named');
+  assert(typeof wasmExports['r47_save_state_named'] != 'undefined', 'missing Wasm export: r47_save_state_named');
+  assert(typeof wasmExports['r47_load_state_named'] != 'undefined', 'missing Wasm export: r47_load_state_named');
+  assert(typeof wasmExports['r47_load_savfile_named'] != 'undefined', 'missing Wasm export: r47_load_savfile_named');
+  assert(typeof wasmExports['r47_save_calc'] != 'undefined', 'missing Wasm export: r47_save_calc');
+  assert(typeof wasmExports['r47_delete_program_by_label'] != 'undefined', 'missing Wasm export: r47_delete_program_by_label');
+  assert(typeof wasmExports['r47_delete_all_programs'] != 'undefined', 'missing Wasm export: r47_delete_all_programs');
+  assert(typeof wasmExports['r47_number_of_programs'] != 'undefined', 'missing Wasm export: r47_number_of_programs');
+  assert(typeof wasmExports['r47_current_program_number'] != 'undefined', 'missing Wasm export: r47_current_program_number');
+  assert(typeof wasmExports['r47_set_current_program'] != 'undefined', 'missing Wasm export: r47_set_current_program');
+  assert(typeof wasmExports['r47_program_label_at'] != 'undefined', 'missing Wasm export: r47_program_label_at');
+  assert(typeof wasmExports['r47_delete_program_by_name'] != 'undefined', 'missing Wasm export: r47_delete_program_by_name');
+  assert(typeof wasmExports['r47_get_flag'] != 'undefined', 'missing Wasm export: r47_get_flag');
+  assert(typeof wasmExports['main'] != 'undefined', 'missing Wasm export: main');
+  assert(typeof wasmExports['r47_stage_upload'] != 'undefined', 'missing Wasm export: r47_stage_upload');
+  assert(typeof wasmExports['getSnapBufferPtr'] != 'undefined', 'missing Wasm export: getSnapBufferPtr');
+  assert(typeof wasmExports['getSnapBufferSize'] != 'undefined', 'missing Wasm export: getSnapBufferSize');
   assert(typeof wasmExports['init_lcd_buffers'] != 'undefined', 'missing Wasm export: init_lcd_buffers');
   assert(typeof wasmExports['getScreenDataPtr'] != 'undefined', 'missing Wasm export: getScreenDataPtr');
   assert(typeof wasmExports['isScreenDirty'] != 'undefined', 'missing Wasm export: isScreenDirty');
   assert(typeof wasmExports['web_init'] != 'undefined', 'missing Wasm export: web_init');
   assert(typeof wasmExports['tick'] != 'undefined', 'missing Wasm export: tick');
-  assert(typeof wasmExports['r47_set_save_name'] != 'undefined', 'missing Wasm export: r47_set_save_name');
   assert(typeof wasmExports['sendSimKeyNative'] != 'undefined', 'missing Wasm export: sendSimKeyNative');
-  assert(typeof wasmExports['getXRegisterString'] != 'undefined', 'missing Wasm export: getXRegisterString');
-  assert(typeof wasmExports['isAlphaMode'] != 'undefined', 'missing Wasm export: isAlphaMode');
-  assert(typeof wasmExports['getKeyLabelNative'] != 'undefined', 'missing Wasm export: getKeyLabelNative');
-  assert(typeof wasmExports['openHomeMenu'] != 'undefined', 'missing Wasm export: openHomeMenu');
-  assert(typeof wasmExports['openMyMenu'] != 'undefined', 'missing Wasm export: openMyMenu');
-  assert(typeof wasmExports['getSnapBufferPtr'] != 'undefined', 'missing Wasm export: getSnapBufferPtr');
-  assert(typeof wasmExports['getSnapBufferSize'] != 'undefined', 'missing Wasm export: getSnapBufferSize');
-  assert(typeof wasmExports['r47_save_program_named'] != 'undefined', 'missing Wasm export: r47_save_program_named');
   assert(typeof wasmExports['r47_snap_named'] != 'undefined', 'missing Wasm export: r47_snap_named');
   assert(typeof wasmExports['isIoMenuOpen'] != 'undefined', 'missing Wasm export: isIoMenuOpen');
   assert(typeof wasmExports['strerror'] != 'undefined', 'missing Wasm export: strerror');
@@ -5613,10 +5802,10 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['emscripten_stack_get_current'] != 'undefined', 'missing Wasm export: emscripten_stack_get_current');
   assert(typeof wasmExports['dynCall_vi'] != 'undefined', 'missing Wasm export: dynCall_vi');
   assert(typeof wasmExports['dynCall_ii'] != 'undefined', 'missing Wasm export: dynCall_ii');
+  assert(typeof wasmExports['dynCall_vii'] != 'undefined', 'missing Wasm export: dynCall_vii');
   assert(typeof wasmExports['dynCall_iii'] != 'undefined', 'missing Wasm export: dynCall_iii');
   assert(typeof wasmExports['dynCall_v'] != 'undefined', 'missing Wasm export: dynCall_v');
   assert(typeof wasmExports['dynCall_viii'] != 'undefined', 'missing Wasm export: dynCall_viii');
-  assert(typeof wasmExports['dynCall_vii'] != 'undefined', 'missing Wasm export: dynCall_vii');
   assert(typeof wasmExports['dynCall_viiii'] != 'undefined', 'missing Wasm export: dynCall_viiii');
   assert(typeof wasmExports['dynCall_iiii'] != 'undefined', 'missing Wasm export: dynCall_iiii');
   assert(typeof wasmExports['dynCall_jiji'] != 'undefined', 'missing Wasm export: dynCall_jiji');
@@ -5631,21 +5820,60 @@ function assignWasmExports(wasmExports) {
   _saveCalc = Module['_saveCalc'] = createExportWrapper('saveCalc', 0);
   _malloc = createExportWrapper('malloc', 1);
   _free = createExportWrapper('free', 1);
+  _fnClAll = Module['_fnClAll'] = createExportWrapper('fnClAll', 1);
+  _refreshLcd = Module['_refreshLcd'] = createExportWrapper('refreshLcd', 1);
+  _refreshTimer = Module['_refreshTimer'] = createExportWrapper('refreshTimer', 1);
+  _r47_hello = Module['_r47_hello'] = createExportWrapper('r47_hello', 0);
+  _r47_init = Module['_r47_init'] = createExportWrapper('r47_init', 0);
+  _r47_screen_ptr = Module['_r47_screen_ptr'] = createExportWrapper('r47_screen_ptr', 0);
+  _r47_screen_stride = Module['_r47_screen_stride'] = createExportWrapper('r47_screen_stride', 0);
+  _r47_fn_key = Module['_r47_fn_key'] = createExportWrapper('r47_fn_key', 2);
+  _r47_key = Module['_r47_key'] = createExportWrapper('r47_key', 2);
+  _r47_tick = Module['_r47_tick'] = createExportWrapper('r47_tick', 1);
+  _wasm_tick_timers = Module['_wasm_tick_timers'] = createExportWrapper('wasm_tick_timers', 1);
+  _r47_get_calc_mode = Module['_r47_get_calc_mode'] = createExportWrapper('r47_get_calc_mode', 0);
+  _r47_flag_browser_screen = Module['_r47_flag_browser_screen'] = createExportWrapper('r47_flag_browser_screen', 0);
+  _r47_get_scr_upd_mode = Module['_r47_get_scr_upd_mode'] = createExportWrapper('r47_get_scr_upd_mode', 0);
+  _r47_set_scr_upd_mode = Module['_r47_set_scr_upd_mode'] = createExportWrapper('r47_set_scr_upd_mode', 1);
+  _r47_force_refresh = Module['_r47_force_refresh'] = createExportWrapper('r47_force_refresh', 0);
+  _r47_key_label = Module['_r47_key_label'] = createExportWrapper('r47_key_label', 2);
+  _r47_user_mode = Module['_r47_user_mode'] = createExportWrapper('r47_user_mode', 0);
+  _r47_calc_model = Module['_r47_calc_model'] = createExportWrapper('r47_calc_model', 0);
+  _r47_key_shift_type = Module['_r47_key_shift_type'] = createExportWrapper('r47_key_shift_type', 1);
+  _r47_is_r47_family = Module['_r47_is_r47_family'] = createExportWrapper('r47_is_r47_family', 0);
+  _r47_shift_state = Module['_r47_shift_state'] = createExportWrapper('r47_shift_state', 0);
+  _r47_build_date = Module['_r47_build_date'] = createExportWrapper('r47_build_date', 0);
+  _r47_set_calc_model = Module['_r47_set_calc_model'] = createExportWrapper('r47_set_calc_model', 1);
+  _r47_softkey_label = Module['_r47_softkey_label'] = createExportWrapper('r47_softkey_label', 1);
+  _r47_menu_id = Module['_r47_menu_id'] = createExportWrapper('r47_menu_id', 0);
+  _r47_softmenu_offset = Module['_r47_softmenu_offset'] = createExportWrapper('r47_softmenu_offset', 0);
+  _r47_x_display = Module['_r47_x_display'] = createExportWrapper('r47_x_display', 0);
+  _r47_load_program_named = Module['_r47_load_program_named'] = createExportWrapper('r47_load_program_named', 1);
+  _r47_set_save_name = Module['_r47_set_save_name'] = createExportWrapper('r47_set_save_name', 1);
+  _r47_save_program_named = Module['_r47_save_program_named'] = createExportWrapper('r47_save_program_named', 1);
+  _r47_export_rtf_program_named = Module['_r47_export_rtf_program_named'] = createExportWrapper('r47_export_rtf_program_named', 1);
+  _r47_save_state_named = Module['_r47_save_state_named'] = createExportWrapper('r47_save_state_named', 1);
+  _r47_load_state_named = Module['_r47_load_state_named'] = createExportWrapper('r47_load_state_named', 1);
+  _r47_load_savfile_named = Module['_r47_load_savfile_named'] = createExportWrapper('r47_load_savfile_named', 1);
+  _r47_save_calc = Module['_r47_save_calc'] = createExportWrapper('r47_save_calc', 0);
+  _r47_delete_program_by_label = Module['_r47_delete_program_by_label'] = createExportWrapper('r47_delete_program_by_label', 1);
+  _r47_delete_all_programs = Module['_r47_delete_all_programs'] = createExportWrapper('r47_delete_all_programs', 0);
+  _r47_number_of_programs = Module['_r47_number_of_programs'] = createExportWrapper('r47_number_of_programs', 0);
+  _r47_current_program_number = Module['_r47_current_program_number'] = createExportWrapper('r47_current_program_number', 0);
+  _r47_set_current_program = Module['_r47_set_current_program'] = createExportWrapper('r47_set_current_program', 1);
+  _r47_program_label_at = Module['_r47_program_label_at'] = createExportWrapper('r47_program_label_at', 1);
+  _r47_delete_program_by_name = Module['_r47_delete_program_by_name'] = createExportWrapper('r47_delete_program_by_name', 1);
+  _r47_get_flag = Module['_r47_get_flag'] = createExportWrapper('r47_get_flag', 1);
+  _main = Module['_main'] = createExportWrapper('main', 2);
+  _r47_stage_upload = Module['_r47_stage_upload'] = createExportWrapper('r47_stage_upload', 1);
+  _getSnapBufferPtr = Module['_getSnapBufferPtr'] = createExportWrapper('getSnapBufferPtr', 0);
+  _getSnapBufferSize = Module['_getSnapBufferSize'] = createExportWrapper('getSnapBufferSize', 0);
   _init_lcd_buffers = Module['_init_lcd_buffers'] = createExportWrapper('init_lcd_buffers', 0);
   _getScreenDataPtr = Module['_getScreenDataPtr'] = createExportWrapper('getScreenDataPtr', 0);
   _isScreenDirty = Module['_isScreenDirty'] = createExportWrapper('isScreenDirty', 0);
   _web_init = Module['_web_init'] = createExportWrapper('web_init', 0);
   _tick = Module['_tick'] = createExportWrapper('tick', 0);
-  _r47_set_save_name = Module['_r47_set_save_name'] = createExportWrapper('r47_set_save_name', 1);
   _sendSimKeyNative = Module['_sendSimKeyNative'] = createExportWrapper('sendSimKeyNative', 3);
-  _getXRegisterString = Module['_getXRegisterString'] = createExportWrapper('getXRegisterString', 0);
-  _isAlphaMode = Module['_isAlphaMode'] = createExportWrapper('isAlphaMode', 0);
-  _getKeyLabelNative = Module['_getKeyLabelNative'] = createExportWrapper('getKeyLabelNative', 2);
-  _openHomeMenu = Module['_openHomeMenu'] = createExportWrapper('openHomeMenu', 0);
-  _openMyMenu = Module['_openMyMenu'] = createExportWrapper('openMyMenu', 0);
-  _getSnapBufferPtr = Module['_getSnapBufferPtr'] = createExportWrapper('getSnapBufferPtr', 0);
-  _getSnapBufferSize = Module['_getSnapBufferSize'] = createExportWrapper('getSnapBufferSize', 0);
-  _r47_save_program_named = Module['_r47_save_program_named'] = createExportWrapper('r47_save_program_named', 1);
   _r47_snap_named = Module['_r47_snap_named'] = createExportWrapper('r47_snap_named', 1);
   _isIoMenuOpen = Module['_isIoMenuOpen'] = createExportWrapper('isIoMenuOpen', 0);
   _strerror = createExportWrapper('strerror', 1);
@@ -5658,10 +5886,10 @@ function assignWasmExports(wasmExports) {
   _emscripten_stack_get_current = wasmExports['emscripten_stack_get_current'];
   dynCall_vi = dynCalls['vi'] = createExportWrapper('dynCall_vi', 2);
   dynCall_ii = dynCalls['ii'] = createExportWrapper('dynCall_ii', 2);
+  dynCall_vii = dynCalls['vii'] = createExportWrapper('dynCall_vii', 3);
   dynCall_iii = dynCalls['iii'] = createExportWrapper('dynCall_iii', 3);
   dynCall_v = dynCalls['v'] = createExportWrapper('dynCall_v', 1);
   dynCall_viii = dynCalls['viii'] = createExportWrapper('dynCall_viii', 4);
-  dynCall_vii = dynCalls['vii'] = createExportWrapper('dynCall_vii', 3);
   dynCall_viiii = dynCalls['viiii'] = createExportWrapper('dynCall_viiii', 5);
   dynCall_iiii = dynCalls['iiii'] = createExportWrapper('dynCall_iiii', 4);
   dynCall_jiji = dynCalls['jiji'] = createExportWrapper('dynCall_jiji', 4);
@@ -5676,19 +5904,31 @@ function assignWasmExports(wasmExports) {
 
 var wasmImports = {
   /** @export */
-  _Buzz,
-  /** @export */
   __assert_fail: ___assert_fail,
   /** @export */
   __call_sighandler: ___call_sighandler,
   /** @export */
+  __syscall_chdir: ___syscall_chdir,
+  /** @export */
   __syscall_fcntl64: ___syscall_fcntl64,
   /** @export */
+  __syscall_fstat64: ___syscall_fstat64,
+  /** @export */
+  __syscall_getdents64: ___syscall_getdents64,
+  /** @export */
   __syscall_ioctl: ___syscall_ioctl,
+  /** @export */
+  __syscall_lstat64: ___syscall_lstat64,
+  /** @export */
+  __syscall_mkdirat: ___syscall_mkdirat,
+  /** @export */
+  __syscall_newfstatat: ___syscall_newfstatat,
   /** @export */
   __syscall_openat: ___syscall_openat,
   /** @export */
   __syscall_rmdir: ___syscall_rmdir,
+  /** @export */
+  __syscall_stat64: ___syscall_stat64,
   /** @export */
   __syscall_unlinkat: ___syscall_unlinkat,
   /** @export */
@@ -5720,11 +5960,7 @@ var wasmImports = {
   /** @export */
   fd_write: _fd_write,
   /** @export */
-  proc_exit: _proc_exit,
-  /** @export */
-  web_load_file,
-  /** @export */
-  web_save_file
+  proc_exit: _proc_exit
 };
 
 
@@ -5732,6 +5968,27 @@ var wasmImports = {
 // === Auto-generated postamble setup entry stuff ===
 
 var calledRun;
+
+function callMain() {
+  assert(runDependencies == 0, 'cannot call main when async dependencies remain! (listen on Module["onRuntimeInitialized"])');
+  assert(typeof onPreRuns === 'undefined' || onPreRuns.length == 0, 'cannot call main when preRun functions remain to be called');
+
+  var entryFunction = _main;
+
+  var argc = 0;
+  var argv = 0;
+
+  try {
+
+    var ret = entryFunction(argc, argv);
+
+    // if we're not running an evented main loop, it's time to exit
+    exitJS(ret, /* implicit = */ true);
+    return ret;
+  } catch (e) {
+    return handleException(e);
+  }
+}
 
 function stackCheckInit() {
   // This is normally called automatically during __wasm_call_ctors but need to
@@ -5770,10 +6027,14 @@ function run() {
 
     initRuntime();
 
+    preMain();
+
+    readyPromiseResolve?.(Module);
     Module['onRuntimeInitialized']?.();
     consumedModuleProp('onRuntimeInitialized');
 
-    assert(!Module['_main'], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
+    var noInitialRun = Module['noInitialRun'] || false;
+    if (!noInitialRun) callMain();
 
     postRun();
   }
@@ -5832,11 +6093,60 @@ function checkUnflushedContent() {
 
 var wasmExports;
 
-// With async instantation wasmExports is assigned asynchronously when the
-// instance is received.
-createWasm();
+// In modularize mode the generated code is within a factory function so we
+// can use await here (since it's not top-level-await).
+wasmExports = await (createWasm());
 
 run();
 
 // end include: postamble.js
+
+// include: postamble_modularize.js
+// In MODULARIZE mode we wrap the generated code in a factory function
+// and return either the Module itself, or a promise of the module.
+//
+// We assign to the `moduleRtn` global here and configure closure to see
+// this as an extern so it won't get minified.
+
+if (runtimeInitialized)  {
+  moduleRtn = Module;
+} else {
+  // Set up the promise that indicates the Module is initialized
+  moduleRtn = new Promise((resolve, reject) => {
+    readyPromiseResolve = resolve;
+    readyPromiseReject = reject;
+  });
+}
+
+// Assertion for attempting to access module properties on the incoming
+// moduleArg.  In the past we used this object as the prototype of the module
+// and assigned properties to it, but now we return a distinct object.  This
+// keeps the instance private until it is ready (i.e the promise has been
+// resolved).
+for (const prop of Object.keys(Module)) {
+  if (!(prop in moduleArg)) {
+    Object.defineProperty(moduleArg, prop, {
+      configurable: true,
+      get() {
+        abort(`Access to module property ('${prop}') is no longer possible via the module constructor argument; Instead, use the result of the module constructor.`)
+      }
+    });
+  }
+}
+// end include: postamble_modularize.js
+
+
+
+    return moduleRtn;
+  };
+})();
+
+// Export using a UMD style export, or ES6 exports if selected
+if (typeof exports === 'object' && typeof module === 'object') {
+  module.exports = R47Module;
+  // This default export looks redundant, but it allows TS to import this
+  // commonjs style module.
+  module.exports.default = R47Module;
+} else if (typeof define === 'function' && define['amd'])
+  define([], () => R47Module);
 

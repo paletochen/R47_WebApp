@@ -1,0 +1,1502 @@
+/* R47 Web — portrait skin @ 526×980.
+   Styling and sizes mirror src/c47-gtk/gtkGui.c + res/c47_pre.css so the
+   web UI looks the same as ./r47. */
+
+@font-face {
+  font-family: "C47_Standard";
+  src: url("static/fonts/C47__StandardFont.ttf") format("truetype");
+  font-weight: normal;
+  font-style:  normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "C47_Numeric";
+  src: url("static/fonts/C47__NumericFont.ttf") format("truetype");
+  font-weight: normal;
+  font-style:  normal;
+  font-display: block;
+}
+
+:root {
+  /* ---- Custom Style from User --------------------------------------- */
+  --radius:            2px;
+  --font-sans:         'C47_Standard', 'Inter', sans-serif;
+  --font-numeric:      'C47_Numeric', sans-serif;
+  --bg:                #1a1a1a;
+  --skin-w:            526px;
+  --skin-h:            980px;
+  --device-left:       50%;
+  --device-top:        50%;
+  --device-top-edge:   0px;
+  --toolbar-top:       14px;
+  --toolbar-viewport-top: 0px;
+  --key-border:        #050505;
+  --key-bg:            linear-gradient(to bottom, #2a2a2a 0%, #151515 100%);
+  --key-hover:         linear-gradient(to bottom, #353535 0%, #202020 100%);
+  --key-label:         #ffffff;
+  --key-fn-bg:         linear-gradient(to bottom, #2a2a2a 0%, #151515 100%);
+  --key-fn-border:     #050505;
+  --key-fn-hover:      linear-gradient(to bottom, #353535 0%, #202020 100%);
+  --f-gold:            #E5AE5A;
+  --g-blue:            #7EB6BA;
+  --key-fn-label:      #ffffff;
+  --key-num-bg:        linear-gradient(to bottom, #3a3a3a 0%, #252525 100%);
+  --key-num-border:    #050505;
+  --key-num-hover:     linear-gradient(to bottom, #4a4a4a 0%, #303030 100%);
+  --key-num-label:     #ffffff;
+  --key-nav-bg:        linear-gradient(to bottom, #2a2a2a 0%, #151515 100%);
+  --key-nav-border:    #050505;
+  --key-nav-hover:     linear-gradient(to bottom, #353535 0%, #202020 100%);
+  --key-nav-label:     #ffffff;
+  --key-op-bg:         linear-gradient(to bottom, #2a2a2a 0%, #151515 100%);
+  --key-op-border:     #050505;
+  --key-op-hover:      linear-gradient(to bottom, #353535 0%, #202020 100%);
+  --key-op-label:      #ffffff;
+  --letter-grey:       #a5a5a5;
+  --f-gold:            #E5AE5A;
+  --f-hover-gold:      #F5C97A;
+  --shift-f-bg:        linear-gradient(to bottom, #f5a623 0%, #d48a10 100%);
+  --shift-f-hover:     linear-gradient(to bottom, #ffb633 0%, #e59b20 100%);
+  --shift-f-label:     #000000;
+  --g-blue:            #7EB6BA;
+  --g-hover-blue:      #9ECFD3;
+  --shift-g-bg:        linear-gradient(to bottom, #5bc0de 0%, #31b0d5 100%);
+  --shift-g-hover:     linear-gradient(to bottom, #6cd1ef 0%, #42c1e6 100%);
+  --shift-g-label:     #000000;
+  --skin-filter:       none;
+  --lcd-bg:            #e2f0d9;
+  --popup-backdrop:    rgba(0,0,0,0.55);
+  --popup-panel:       #201c18;
+  --popup-panel-head:  #2a241e;
+  --popup-surface:     #322b24;
+  --popup-surface-hover:#40352b;
+  --popup-border:      #5b4d3f;
+  --popup-button-bg:   #3a3026;
+  --popup-button-hover:#4a3d30;
+  --popup-button-border:#8f7345;
+  --popup-text:        #f4ecdf;
+  --popup-muted:       #ccb89d;
+  --popup-accent:      #d6a15a;
+  --popup-tape-bg:     #f1e8d9;
+  --popup-tape-text:   #2c2218;
+}
+
+/* ---- Calculator body themes ---------------------------------------- */
+html[data-keys-theme="c47"] {
+  --bg:#1A1A1A; --key-bg:#282828; --key-border:#444444; --key-hover:#4E4E4E;
+  --key-fn-bg:#2B2B2B; --key-fn-border:#474747; --key-fn-hover:#525252; --key-fn-label:#FFFFFF;
+  --key-num-bg:#2A2A2A; --key-num-border:#505050; --key-num-hover:#505050; --key-num-label:#FFFFFF;
+  --key-nav-bg:#2E2E2E; --key-nav-border:#4A4A4A; --key-nav-hover:#545454; --key-nav-label:#FFFFFF;
+  --key-op-bg:#323232; --key-op-border:#4E4E4E; --key-op-hover:#585858; --key-op-label:#FFFFFF;
+  --key-label:#FFFFFF; --letter-grey:#C0C0C0;
+  --f-gold:#E5AE5A; --f-hover-gold:#F5C97A;
+  --g-blue:#7EB6BA; --g-hover-blue:#9ECFD3;
+  --skin-filter: saturate(0.3) brightness(0.7);
+}
+html[data-keys-theme="nord-dark"] {
+  --bg:#2E3440; --key-bg:#3B4252; --key-border:#434C5E; --key-hover:#5E81AC;
+  --key-fn-bg:#465062; --key-fn-border:#5A667D; --key-fn-hover:#7083A3; --key-fn-label:#ECEFF4;
+  --key-num-bg:#4A5261; --key-num-border:#616D82; --key-num-hover:#5B657A; --key-num-label:#ECEFF4;
+  --key-nav-bg:#4C566A; --key-nav-border:#66738A; --key-nav-hover:#72839C; --key-nav-label:#ECEFF4;
+  --key-op-bg:#55627A; --key-op-border:#6D7F98; --key-op-hover:#7388A7; --key-op-label:#F3F6FA;
+  --key-label:#ECEFF4; --letter-grey:#D8DEE9;
+  --f-gold:#EBCB8B; --f-hover-gold:#FBE7A6;
+  --g-blue:#88C0D0; --g-hover-blue:#B4DCE5;
+  --skin-filter: hue-rotate(-40deg) saturate(0.75);
+}
+html[data-keys-theme="dracula"] {
+  --bg:#282A36; --key-bg:#44475A; --key-border:#6272A4; --key-hover:#89B4FA;
+  --key-fn-bg:#4C5168; --key-fn-border:#6B78A9; --key-fn-hover:#7E91BE; --key-fn-label:#F8F8F2;
+  --key-num-bg:#555A66; --key-num-border:#6E7685; --key-num-hover:#676F81; --key-num-label:#F8F8F2;
+  --key-nav-bg:#4E5C72; --key-nav-border:#6B82A3; --key-nav-hover:#7089AF; --key-nav-label:#F8F8F2;
+  --key-op-bg:#596688; --key-op-border:#7B8FB7; --key-op-hover:#7F98C4; --key-op-label:#FFFFFF;
+  --key-label:#F8F8F2; --letter-grey:#BFBFBF;
+  --f-gold:#FFB86C; --f-hover-gold:#FFD39E;
+  --g-blue:#8BE9FD; --g-hover-blue:#CFEFFF;
+  --skin-filter: hue-rotate(182deg) saturate(0.58) brightness(0.95);
+}
+html[data-keys-theme="monokai"] {
+  --bg:#272822; --key-bg:#3E3D32; --key-border:#75715E; --key-hover:#F92672;
+  --key-fn-bg:#49493A; --key-fn-border:#827C68; --key-fn-hover:#625F4D; --key-fn-label:#F8F8F2;
+  --key-num-bg:#565545; --key-num-border:#7B7661; --key-num-hover:#696754; --key-num-label:#F8F8F2;
+  --key-nav-bg:#48503F; --key-nav-border:#6D7860; --key-nav-hover:#5D6652; --key-nav-label:#F8F8F2;
+  --key-op-bg:#5A493A; --key-op-border:#8A7359; --key-op-hover:#735C47; --key-op-label:#FFF3E8;
+  --key-label:#F8F8F2; --letter-grey:#CCCCC6;
+  --f-gold:#FD971F; --f-hover-gold:#FFB74D;
+  --g-blue:#66D9EF; --g-hover-blue:#A5E8F5;
+  --skin-filter: hue-rotate(60deg) saturate(0.7);
+}
+html[data-keys-theme="solarized-dark"] {
+  --bg:#002B36; --key-bg:#073642; --key-border:#586E75; --key-hover:#268BD2;
+  --key-fn-bg:#123F49; --key-fn-border:#586E73; --key-fn-hover:#2D5A65; --key-fn-label:#EEE8D5;
+  --key-num-bg:#184149; --key-num-border:#5D7173; --key-num-hover:#25505A; --key-num-label:#EEE8D5;
+  --key-nav-bg:#0F484D; --key-nav-border:#4E7979; --key-nav-hover:#216165; --key-nav-label:#EEE8D5;
+  --key-op-bg:#284E59; --key-op-border:#687E84; --key-op-hover:#386470; --key-op-label:#F5F0DF;
+  --key-label:#EEE8D5; --letter-grey:#93A1A1;
+  --f-gold:#B58900; --f-hover-gold:#DDB53A; --shift-f-label:#FFFFFF;
+  --g-blue:#2AA198; --g-hover-blue:#5FC5BA; --shift-g-label:#FFFFFF;
+  --skin-filter: hue-rotate(-140deg) saturate(0.55);
+}
+html[data-keys-theme="tokyo-night"] {
+  --bg:#1A1B26; --key-bg:#24283B; --key-border:#414868; --key-hover:#7AA2F7;
+  --key-fn-bg:#2B3148; --key-fn-border:#4F597A; --key-fn-hover:#596B95; --key-fn-label:#C0CAF5;
+  --key-num-bg:#2F3447; --key-num-border:#535C74; --key-num-hover:#414B63; --key-num-label:#C0CAF5;
+  --key-nav-bg:#2A3350; --key-nav-border:#506286; --key-nav-hover:#546C98; --key-nav-label:#D4DBFA;
+  --key-op-bg:#36405C; --key-op-border:#6173A1; --key-op-hover:#5A79B2; --key-op-label:#F3F6FF;
+  --key-label:#C0CAF5; --letter-grey:#9AA5CE;
+  --f-gold:#E0AF68; --f-hover-gold:#F2CB94;
+  --g-blue:#7DCFFF; --g-hover-blue:#B0DEFC;
+  --skin-filter: hue-rotate(-90deg) saturate(0.85);
+}
+html[data-keys-theme="catppuccin-mocha"] {
+  --bg:#1E1E2E; --key-bg:#313244; --key-border:#45475A; --key-hover:#89B4FA;
+  --key-fn-bg:#3A3C52; --key-fn-border:#565A71; --key-fn-hover:#6278A3; --key-fn-label:#CDD6F4;
+  --key-num-bg:#404255; --key-num-border:#5E6274; --key-num-hover:#505468; --key-num-label:#DCE4FF;
+  --key-nav-bg:#39435D; --key-nav-border:#5B6A8D; --key-nav-hover:#5D749D; --key-nav-label:#DCE4FF;
+  --key-op-bg:#44506A; --key-op-border:#677C9A; --key-op-hover:#6079A5; --key-op-label:#E8EFFF;
+  --key-label:#CDD6F4; --letter-grey:#A6ADC8;
+  --f-gold:#F9E2AF; --f-hover-gold:#F5E0DC;
+  --g-blue:#89B4FA; --g-hover-blue:#CDE6FF;
+  --skin-filter: hue-rotate(-18deg) saturate(0.7) brightness(0.92);
+}
+html[data-keys-theme="twilight"] {
+  --bg:#2A2826; --key-bg:#5A5E68; --key-border:#3B3E46; --key-hover:#6C707A;
+  --key-fn-bg:#5A5E68; --key-fn-border:#3B3E46; --key-fn-hover:#6C707A; --key-fn-label:#F0F1F3;
+  --key-num-bg:#E2E3E5; --key-num-border:#A8A9AC; --key-num-hover:#F2F3F5; --key-num-label:#242628;
+  --key-nav-bg:#5A5E68; --key-nav-border:#3B3E46; --key-nav-hover:#6C707A; --key-nav-label:#F0F1F3;
+  --key-op-bg:#7A6455; --key-op-border:#4A3A2E; --key-op-hover:#917968; --key-op-label:#F5F0EA;
+  --key-label:#F0F1F3; --letter-grey:#A0A2A8;
+  --f-gold:#F0B284; --f-hover-gold:#F5C59F; --shift-f-label:#1A0E04;
+  --g-blue:#E8A2A2; --g-hover-blue:#F1BABA; --shift-g-label:#2A0A0A;
+  --skin-filter: hue-rotate(-15deg) saturate(0.18) brightness(0.28);
+}
+html[data-keys-theme="hp-clean"] {
+  --bg:#2B2A29; --key-bg:#2B2A29; --key-border:#2B2A29; --key-hover:#40352B;
+  --key-fn-bg:#2B2A29; --key-fn-border:#2B2A29; --key-fn-hover:#40352B; --key-fn-label:#FFFFFF;
+  --key-num-bg:#2B2A29; --key-num-border:#2B2A29; --key-num-hover:#40352B; --key-num-label:#FFFFFF;
+  --key-nav-bg:#2B2A29; --key-nav-border:#2B2A29; --key-nav-hover:#40352B; --key-nav-label:#FFFFFF;
+  --key-op-bg:#2B2A29; --key-op-border:#2B2A29; --key-op-hover:#40352B; --key-op-label:#FFFFFF;
+  --key-label:#FFFFFF; --letter-grey:#A5A5A5;
+  --f-gold:#E5AE5A; --f-hover-gold:#FFD66F;
+  --g-blue:#7EB6BA; --g-hover-blue:#A5E2E6;
+  --shift-f-label:#000000;
+  --shift-g-label:#000000;
+  --skin-filter: none;
+}
+html[data-keys-theme="hp-10b-clean"] {
+  --bg:#182331; --key-bg:#182331; --key-border:#182331; --key-hover:#24364C;
+  --key-fn-bg:#182331; --key-fn-border:#182331; --key-fn-hover:#24364C; --key-fn-label:#5E8FC7;
+  --key-num-bg:#182331; --key-num-border:#182331; --key-num-hover:#24364C; --key-num-label:#5E8FC7;
+  --key-nav-bg:#182331; --key-nav-border:#182331; --key-nav-hover:#24364C; --key-nav-label:#5E8FC7;
+  --key-op-bg:#182331; --key-op-border:#182331; --key-op-hover:#24364C; --key-op-label:#5E8FC7;
+  --key-label:#5E8FC7; --letter-grey:#5A8FCA;
+  --f-gold:#6499D3; --f-hover-gold:#8DBDEF;
+  --g-blue:#5A8FCA; --g-hover-blue:#82B5EA;
+  --shift-f-bg:#182331; --shift-f-hover:#24364C; --shift-f-label:#6499D3;
+  --shift-g-bg:#182331; --shift-g-hover:#24364C; --shift-g-label:#5A8FCA;
+  --skin-filter: sepia(0.32) saturate(1.6) hue-rotate(172deg) brightness(0.76);
+}
+html[data-keys-theme="blue-steel"] {
+  --bg:#A8B5C2; --key-bg:#E1E7EE; --key-border:#74869A; --key-hover:#9FBAD5;
+  --key-fn-bg:#D5DEE7; --key-fn-border:#8194A7; --key-fn-hover:#B4C6D6; --key-fn-label:#172433;
+  --key-num-bg:#EEF2F6; --key-num-border:#98A8B7; --key-num-hover:#D9E2E9; --key-num-label:#172433;
+  --key-nav-bg:#D3DEE9; --key-nav-border:#7D95AB; --key-nav-hover:#B0C4D7; --key-nav-label:#172433;
+  --key-op-bg:#DBE4EC; --key-op-border:#8A9CAD; --key-op-hover:#C1D0DD; --key-op-label:#172433;
+  --key-label:#172433; --letter-grey:#516273;
+  --f-gold:#B77A14; --f-hover-gold:#D8A54A; --shift-f-label:#FFFFFF;
+  --g-blue:#236EA8; --g-hover-blue:#5EA4D9; --shift-g-label:#FFFFFF;
+  --skin-filter: invert(1) hue-rotate(198deg) saturate(0.68) brightness(1.02);
+}
+html[data-keys-theme="blue-steel-clean"] {
+  --bg:#A8B5C2; --key-bg:#A8B5C2; --key-border:#A8B5C2; --key-hover:#B9C7D5;
+  --key-fn-bg:#A8B5C2; --key-fn-border:#A8B5C2; --key-fn-hover:#B9C7D5; --key-fn-label:#172433;
+  --key-num-bg:#A8B5C2; --key-num-border:#A8B5C2; --key-num-hover:#B9C7D5; --key-num-label:#172433;
+  --key-nav-bg:#A8B5C2; --key-nav-border:#A8B5C2; --key-nav-hover:#B9C7D5; --key-nav-label:#172433;
+  --key-op-bg:#A8B5C2; --key-op-border:#A8B5C2; --key-op-hover:#B9C7D5; --key-op-label:#172433;
+  --key-label:#172433; --letter-grey:#405268;
+  --f-gold:#6A3A00; --f-hover-gold:#8A5708;
+  --g-blue:#004878; --g-hover-blue:#0D689F;
+  --shift-f-bg:#A8B5C2; --shift-f-hover:#B9C7D5; --shift-f-label:#6A3A00;
+  --shift-g-bg:#A8B5C2; --shift-g-hover:#B9C7D5; --shift-g-label:#004878;
+  --skin-filter: invert(1) hue-rotate(198deg) saturate(0.68) brightness(1.02);
+}
+html[data-keys-theme="rose-quartz"] {
+  --bg:#D5C0C3; --key-bg:#F0E5E6; --key-border:#B68E96; --key-hover:#D8B3BB;
+  --key-fn-bg:#E8DADC; --key-fn-border:#C09BA3; --key-fn-hover:#DCC1C5; --key-fn-label:#3B2A2F;
+  --key-num-bg:#F8F1F2; --key-num-border:#C7AAB0; --key-num-hover:#EAD7DA; --key-num-label:#3B2A2F;
+  --key-nav-bg:#E6E1E7; --key-nav-border:#A4AEBB; --key-nav-hover:#D0D8E2; --key-nav-label:#3B2A2F;
+  --key-op-bg:#ECE0E2; --key-op-border:#C6A0A6; --key-op-hover:#DFC4C9; --key-op-label:#3B2A2F;
+  --key-label:#3B2A2F; --letter-grey:#7D6067;
+  --f-gold:#B97C2F; --f-hover-gold:#D8A65E;
+  --g-blue:#5A82A3; --g-hover-blue:#8EB1CF; --shift-g-label:#FFFFFF;
+  --skin-filter: invert(1) hue-rotate(146deg) saturate(0.4) brightness(1.03);
+}
+
+/* ---- Light themes -------------------------------------------------- */
+html[data-keys-theme="platinum"] {
+  --bg:#C8CDD5; --key-bg:#45505D; --key-border:#6C7683; --key-hover:#6E8099;
+  --key-fn-bg:#4E5B6C; --key-fn-border:#708095; --key-fn-hover:#667992; --key-fn-label:#F6F8FB;
+  --key-num-bg:#414851; --key-num-border:#616B76; --key-num-hover:#596575; --key-num-label:#F4F7FB;
+  --key-nav-bg:#66758A; --key-nav-border:#4E5C70; --key-nav-hover:#7B8DA4; --key-nav-label:#FFFFFF;
+  --key-op-bg:#596679; --key-op-border:#74859B; --key-op-hover:#6B7F98; --key-op-label:#F8FBFF;
+  --key-label:#F5F8FC; --letter-grey:#55657A;
+  --f-gold:#5F97EC; --f-hover-gold:#8AB8FF; --shift-f-label:#FFFFFF;
+  --g-blue:#5CA56F; --g-hover-blue:#83C88F; --shift-g-label:#FFFFFF;
+  --skin-filter: invert(1) hue-rotate(198deg) saturate(0.24) brightness(1.01);
+}
+html[data-keys-theme="hp-10b"] {
+  --bg:#C8CED6; --key-bg:#1A1D22; --key-border:#4F5964; --key-hover:#30455C;
+  --key-fn-bg:#263648; --key-fn-border:#4F6784; --key-fn-hover:#3A5573; --key-fn-label:#F5F8FB;
+  --key-num-bg:#17191D; --key-num-border:#5A6470; --key-num-hover:#242B34; --key-num-label:#F5F8FB;
+  --key-nav-bg:#35506E; --key-nav-border:#6984A2; --key-nav-hover:#466485; --key-nav-label:#FFFFFF;
+  --key-op-bg:#1F2530; --key-op-border:#55667B; --key-op-hover:#2E3948; --key-op-label:#F4F8FB;
+  --key-label:#F4F7FA; --letter-grey:#4D7093;
+  --f-gold:#3C78BC; --f-hover-gold:#67A1E0; --shift-f-label:#FFFFFF;
+  --g-blue:#22374F; --g-hover-blue:#41566E; --shift-g-label:#F1F6FB;
+  --skin-filter: invert(1) hue-rotate(190deg) saturate(0.42) brightness(0.92);
+}
+html[data-keys-theme="hp-silver"] {
+  --bg:#B8AE9C; --key-bg:#E8E1D0; --key-border:#8F8674; --key-hover:#CFC6B2;
+  --key-fn-bg:#DBD2BE; --key-fn-border:#958B79; --key-fn-hover:#C5BCA8; --key-fn-label:#2A2316;
+  --key-num-bg:#F1ECDC; --key-num-border:#A69D8B; --key-num-hover:#DFD7C2; --key-num-label:#2A2316;
+  --key-nav-bg:#D6CDB6; --key-nav-border:#8A8170; --key-nav-hover:#C0B69E; --key-nav-label:#2A2316;
+  --key-op-bg:#E0D9C4; --key-op-border:#958B79; --key-op-hover:#CDC4AE; --key-op-label:#2A2316;
+  --key-label:#2A2316; --letter-grey:#5A5240;
+  --f-gold:#B57600; --f-hover-gold:#E0A030; --shift-f-label:#FFFFFF;
+  --g-blue:#0F66AA; --g-hover-blue:#3099DD; --shift-g-label:#FFFFFF;
+  --skin-filter: invert(1) hue-rotate(170deg) saturate(0.28) brightness(1.02);
+}
+html[data-keys-theme="solarized-light"] {
+  --bg:#FDF6E3; --key-bg:#EEE8D5; --key-border:#93A1A1; --key-hover:#268BD2;
+  --key-fn-bg:#E5DFCA; --key-fn-border:#9CA7A4; --key-fn-hover:#D0D9D3; --key-fn-label:#002B36;
+  --key-num-bg:#F6F1E3; --key-num-border:#B2B7A8; --key-num-hover:#E7E0CF; --key-num-label:#002B36;
+  --key-nav-bg:#E1E8DE; --key-nav-border:#85A6AA; --key-nav-hover:#C4DAD4; --key-nav-label:#002B36;
+  --key-op-bg:#E9E2CD; --key-op-border:#A9AEA1; --key-op-hover:#D7CDB7; --key-op-label:#002B36;
+  --key-label:#002B36; --letter-grey:#657B83;
+  --f-gold:#B58900; --f-hover-gold:#E8B840; --shift-f-label:#FFFFFF;
+  --g-blue:#2AA198; --g-hover-blue:#5FC5BA; --shift-g-label:#FFFFFF;
+  --skin-filter: invert(1) hue-rotate(180deg) saturate(0.7);
+}
+html[data-keys-theme="nord-light"] {
+  --bg:#ECEFF4; --key-bg:#E5E9F0; --key-border:#D8DEE9; --key-hover:#81A1C1;
+  --key-fn-bg:#DEE5ED; --key-fn-border:#C8D1DE; --key-fn-hover:#B3C4D6; --key-fn-label:#2E3440;
+  --key-num-bg:#F3F5F8; --key-num-border:#D9E0E8; --key-num-hover:#E5E9EF; --key-num-label:#2E3440;
+  --key-nav-bg:#E0E7EF; --key-nav-border:#BBC9D9; --key-nav-hover:#C3D2E2; --key-nav-label:#2E3440;
+  --key-op-bg:#E8ECF2; --key-op-border:#CCD4DE; --key-op-hover:#D8DFE8; --key-op-label:#2E3440;
+  --key-label:#2E3440; --letter-grey:#4C566A;
+  --f-gold:#D08770; --f-hover-gold:#E8A89B;
+  --g-blue:#5E81AC; --g-hover-blue:#88B0D8; --shift-g-label:#FFFFFF;
+  --skin-filter: invert(1) hue-rotate(210deg) saturate(0.5);
+}
+html[data-keys-theme="gruvbox-light"] {
+  --bg:#FBF1C7; --key-bg:#EBDBB2; --key-border:#BDAE93; --key-hover:#D79921;
+  --key-fn-bg:#E4D4A8; --key-fn-border:#BBA788; --key-fn-hover:#D9BF82; --key-fn-label:#3C3836;
+  --key-num-bg:#F2E6C0; --key-num-border:#CABB9F; --key-num-hover:#E8D7A4; --key-num-label:#3C3836;
+  --key-nav-bg:#E3D8AF; --key-nav-border:#ADA57F; --key-nav-hover:#D3C596; --key-nav-label:#3C3836;
+  --key-op-bg:#E7D5A8; --key-op-border:#BAA077; --key-op-hover:#D7B97C; --key-op-label:#3C3836;
+  --key-label:#3C3836; --letter-grey:#7C6F64;
+  --f-gold:#B57614; --f-hover-gold:#D99A3F; --shift-f-label:#FFFFFF;
+  --g-blue:#076678; --g-hover-blue:#3688A8; --shift-g-label:#FFFFFF;
+  --skin-filter: invert(1) hue-rotate(200deg) saturate(0.6);
+}
+html[data-keys-theme="github-light"] {
+  --bg:#F6F8FA; --key-bg:#FFFFFF; --key-border:#D0D7DE; --key-hover:#EAEEF2;
+  --key-fn-bg:#EAEEF2; --key-fn-border:#AFB8C1; --key-fn-hover:#D8DEE4; --key-fn-label:#24292F;
+  --key-num-bg:#FFFFFF; --key-num-border:#D7DEE5; --key-num-hover:#F1F5F9; --key-num-label:#24292F;
+  --key-nav-bg:#DDF4FF; --key-nav-border:#54AEFF; --key-nav-hover:#B6E3FF; --key-nav-label:#0A3069;
+  --key-op-bg:#DAFBE1; --key-op-border:#4AC26B; --key-op-hover:#AFE1C0; --key-op-label:#1A7F37;
+  --key-label:#24292F; --letter-grey:#57606A;
+  --f-gold:#BF8700; --f-hover-gold:#E8B448; --shift-f-label:#FFFFFF;
+  --g-blue:#0969DA; --g-hover-blue:#54AEFF; --shift-g-label:#FFFFFF;
+  --skin-filter: invert(1) hue-rotate(180deg) saturate(0.35);
+}
+html[data-keys-theme="ti-89-classic"] {
+  --bg:#2C3442; --key-bg:#48515D; --key-border:#1E2430; --key-hover:#647388;
+  --key-label:#F4F7FA; --letter-grey:#9A70BA;
+  --key-fn-bg:#6E88A3; --key-fn-border:#43586D; --key-fn-hover:#89A0B8; --key-fn-label:#FFFFFF;
+  --key-num-bg:#BCC0C5; --key-num-border:#707882; --key-num-hover:#D3D6DA; --key-num-label:#1B232C;
+  --key-nav-bg:#657D98; --key-nav-border:#405568; --key-nav-hover:#7F96AE; --key-nav-label:#FFFFFF;
+  --key-op-bg:#5D728B; --key-op-border:#3D4F61; --key-op-hover:#748BA2; --key-op-label:#FFFFFF;
+  --f-gold:#E1C54D; --f-hover-gold:#F0DA7D; --shift-f-label:#1D1808;
+  --g-blue:#315D38; --g-hover-blue:#4E8158; --shift-g-label:#F3F8F1;
+  --skin-filter: hue-rotate(156deg) saturate(0.62) brightness(0.9);
+}
+html[data-keys-theme="hp-48g"] {
+  --bg:#374541; --key-bg:#616A66; --key-border:#242D2A; --key-hover:#7A8580;
+  --key-label:#F2F5EE; --letter-grey:#E5E9E0;
+  --key-fn-bg:#E3E8DF; --key-fn-border:#9AA39A; --key-fn-hover:#F2F5EE; --key-fn-label:#25302B;
+  --key-num-bg:#8F9992; --key-num-border:#5D6661; --key-num-hover:#A7B1AA; --key-num-label:#15201A;
+  --key-nav-bg:#D5DDD4; --key-nav-border:#8E9990; --key-nav-hover:#E9EEE7; --key-nav-label:#25302B;
+  --key-op-bg:#69736F; --key-op-border:#2E3834; --key-op-hover:#818B86; --key-op-label:#F2F5EE;
+  --f-gold:#A486C9; --f-hover-gold:#C5AFDE; --shift-f-label:#FFFFFF;
+  --g-blue:#4D9C7A; --g-hover-blue:#74BF9E; --shift-g-label:#FFFFFF;
+  --skin-filter: hue-rotate(92deg) saturate(0.32) brightness(0.72);
+}
+html[data-keys-theme="irixium"] {
+  --bg:#6F93A6; --key-bg:#C5BBB2; --key-border:#7F6E5E; --key-hover:#DCD2C9;
+  --key-label:#1B3340; --letter-grey:#E7F0F0;
+  --key-fn-bg:#D9C6C1; --key-fn-border:#9A6658; --key-fn-hover:#EBD9D2; --key-fn-label:#2A1A16;
+  --key-num-bg:#D1DCE0; --key-num-border:#6F8A98; --key-num-hover:#E9F0F2; --key-num-label:#162F3B;
+  --key-nav-bg:#B9D0D8; --key-nav-border:#5E8494; --key-nav-hover:#D5E5EA; --key-nav-label:#14303C;
+  --key-op-bg:#C98572; --key-op-border:#874C3D; --key-op-hover:#DCA08F; --key-op-label:#FFF5EE;
+  --f-gold:#B96E4C; --f-hover-gold:#D58B66; --shift-f-label:#241006;
+  --g-blue:#3E88A8; --g-hover-blue:#70B1C8; --shift-g-label:#061C25;
+  --skin-filter: hue-rotate(138deg) saturate(0.42) brightness(0.94);
+}
+html[data-keys-theme="cde"] {
+  --bg:#3F8F87; --key-bg:#B7D3DD; --key-border:#2E6E6D; --key-hover:#D5E9EC;
+  --key-label:#173038; --letter-grey:#DBEEE8;
+  --key-fn-bg:#DCC0A7; --key-fn-border:#9B6B42; --key-fn-hover:#F1D4BA; --key-fn-label:#2D1A0B;
+  --key-num-bg:#C6D8D2; --key-num-border:#618D86; --key-num-hover:#E0EDE8; --key-num-label:#142D32;
+  --key-nav-bg:#9FC8D8; --key-nav-border:#477789; --key-nav-hover:#C0DDE8; --key-nav-label:#102D3A;
+  --key-op-bg:#78AFC8; --key-op-border:#3E748A; --key-op-hover:#9AC6D6; --key-op-label:#102D3A;
+  --f-gold:#F0A45D; --f-hover-gold:#FFC987; --shift-f-label:#241100;
+  --g-blue:#78AFC8; --g-hover-blue:#A9D5E4; --shift-g-label:#0B2631;
+  --skin-filter: hue-rotate(114deg) saturate(0.58) brightness(0.96);
+}
+
+/* Visually hidden but reachable by screen readers and search-engine crawlers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  font-family: "C47StandardFont", system-ui, sans-serif;
+  color: #fff;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  overflow: hidden;
+  position: fixed;     /* Locks the page in place so Safari PWA can't */
+  top: 0; left: 0;      /* scroll the calculator around (was "floating" */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* #device holds the calculator at its native 526x980 dimensions. We
+   position it absolutely so fitScale() can center it via left/top
+   rather than by margin (which interacts awkwardly with transform
+   and safe-area insets on iPhone PWA standalone mode). */
+#device {
+  position: absolute;
+  width:  var(--skin-w);
+  height: var(--skin-h);
+  left: var(--device-left);
+  top: var(--device-top);
+  transform-origin: center center;
+  transform: translate(-50%, -50%) scale(var(--device-scale, 1));
+}
+/* When the calculator is scaled to fill width and would overflow height,
+   pin it to the top (below the safe-area inset) so the LCD stays visible
+   and the R47 logo at the bottom gets clipped instead. */
+html[data-fill-width="1"] #device {
+  top: env(safe-area-inset-top, 0);
+  transform-origin: top center;
+  transform: translate(-50%, 0) scale(var(--device-scale, 1));
+}
+
+#skin {
+  position: absolute;
+  top: 0; left: 0;
+  width:  var(--skin-w);
+  height: var(--skin-h);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: var(--skin-filter);
+}
+
+/* LCD canvas. The engine renders natively at 400x240; image-rendering:
+   pixelated keeps each engine pixel as a sharp block through the CSS
+   scale. The skin asset carries the body colour above the LCD so the
+   toolbar can sit there without any CSS filler strip. */
+/* LCD frame: themed rectangle that covers the 5-px top/left/right body
+   strips so they take on the LCD theme colour instead of the body
+   colour baked into the PNG. Sits behind the canvas. Height = 5 (top
+   strip) + 294 (LCD area) = 299 px. */
+#lcd-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--skin-w);
+  height: 299px;
+  background: var(--lcd-bg);
+  z-index: 0;
+  display: none;
+}
+#lcd {
+  position: absolute;
+  top:   33px;
+  left:  33px;
+  width: 462px;
+  height: 294px;
+  background: var(--lcd-bg);
+  z-index: 1;
+}
+html[data-lcd-render="pixelated"] #lcd {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+html[data-lcd-render="smooth"] #lcd {
+  image-rendering: auto;
+  -ms-interpolation-mode: bicubic;
+}
+
+#keys { position: absolute; inset: 0; }
+
+.key-container {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lbl {
+  font-size: 1.1rem;
+  font-weight: 700;
+  min-height: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  font-family: var(--font-sans);
+  padding: 0 4px 2px 4px;
+  width: 80%;
+  gap: 12px;
+}
+
+.key-container.c-lbl .lbl {
+  gap: 4px;
+}
+
+.lbl .gold {
+  color: var(--f-gold);
+}
+
+.lbl .blue {
+  color: var(--g-blue);
+}
+
+.alpha {
+    position: absolute;
+    left: calc(80% + 4px);
+    bottom: 2px;
+    font-size: 1rem;
+    color: #fff;
+    font-weight: 400;
+}
+
+/* ---- Primary keys ----
+   Each key is rendered as two layers:
+     1. The <button> element itself — the HIT zone. It's transparent and
+        borderless, sized LARGER than the visual button so touches are
+        generous (PAD px of extra tap area all around).
+     2. A ::before pseudo-element painted INWARD by PAD px. That's the
+        VISUAL button — it keeps the GTK-matching size, background,
+        border, and label position.
+   The label <span> sits above the pseudo-element via z-index so the
+   text appears on top of the painted button body. */
+.key {
+  background: var(--key-bg);
+  border: 1px solid var(--key-border);
+  color: var(--text-color);
+  font-size: 1.4rem;
+  font-weight: 700;
+  padding: 4px 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 32px;
+  transition: transform 0.05s, background 0.1s;
+  font-family: var(--font-sans);
+  width: 80%;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+
+
+/* Primary label (the center text on the button). Shift DOWN by the same
+   amount as the visual body so it stays vertically centered on the
+   dark rectangle. */
+.key-label {
+  position: relative;       /* above ::before */
+  z-index: 1;
+  font: inherit;
+  pointer-events: none;
+  line-height: 1;
+  transform: translateY(var(--btn-y-offset));
+}
+.key:hover::before,
+.key:active::before,
+.key.pressed::before {
+  background: var(--key-hover);
+}
+
+.key.key-fn {
+  color: var(--key-fn-label);
+  opacity: 0;
+}
+.key.key-fn::before {
+  background: var(--key-fn-bg);
+  border-color: var(--key-fn-border);
+}
+.key.key-fn:hover::before,
+.key.key-fn:active::before,
+.key.key-fn.pressed::before {
+  background: var(--key-fn-hover);
+}
+
+.key.key-f {
+  background: var(--f-gold) !important;
+  color: black !important;
+}
+.key.key-g {
+  background: var(--g-blue) !important;
+  color: black !important;
+}
+
+/* Letter labels and shift rows have pointer-events: none so they don't
+   eat touches that should hit a nearby key. */
+.key-letter, .key-shift-row { pointer-events: none; }
+
+/* Numeric digit keys use a larger font (matches #calcNumericKey, 33px). */
+.key.numeric {
+  font-size: 1.2rem;
+  font-family: var(--font-numeric);
+  color: var(--key-num-label);
+}
+.key.numeric::before {
+  background: var(--key-num-bg);
+  border-color: var(--key-num-border);
+}
+.key.numeric:hover::before,
+.key.numeric:active::before,
+.key.numeric.pressed::before {
+  background: var(--key-num-hover);
+}
+
+.key.nav {
+  color: var(--key-nav-label);
+}
+.key.nav::before {
+  background: var(--key-nav-bg);
+  border-color: var(--key-nav-border);
+}
+.key.nav:hover::before,
+.key.nav:active::before,
+.key.nav.pressed::before {
+  background: var(--key-nav-hover);
+}
+
+.key.operator {
+  color: var(--key-op-label);
+}
+.key.operator::before {
+  background: var(--key-op-bg);
+  border-color: var(--key-op-border);
+}
+.key.operator:hover::before,
+.key.operator:active::before,
+.key.operator.pressed::before {
+  background: var(--key-op-hover);
+}
+
+/* The shift keys themselves render in gold/cyan (matches #calcKeyF/G). */
+.key.shift-f { color: var(--shift-f-label); font-size: 27px; }
+.key.shift-f .key-label { transform: translateY(calc(var(--btn-y-offset) + 2px)); }
+.key.shift-f::before { background: var(--shift-f-bg); }
+.key.shift-f:hover::before,
+.key.shift-f:active::before,
+.key.shift-f.pressed::before { background: var(--shift-f-hover); }
+
+.key.shift-g { color: var(--shift-g-label); font-size: 27px; }
+.key.shift-g .key-label { transform: translateY(calc(var(--btn-y-offset) - 3px)); }
+.key.shift-g::before { background: var(--shift-g-bg); }
+.key.shift-g:hover::before,
+.key.shift-g:active::before,
+.key.shift-g.pressed::before { background: var(--shift-g-hover); }
+
+/* Cycling f/g shift key (KEY_fg) — used on C47, R47bk_fg, R47fg_bk, R47fg_g */
+.key.shift-fg { color: var(--shift-f-label); font-size: 24px; }
+.key.shift-fg::before {
+  background: linear-gradient(110deg,
+      var(--shift-f-bg) 0%, var(--shift-f-bg) 50%,
+      var(--shift-g-bg) 50%, var(--shift-g-bg) 100%);
+}
+.key.shift-fg:hover::before,
+.key.shift-fg:active::before,
+.key.shift-fg.pressed::before {
+  background: linear-gradient(110deg,
+      var(--shift-f-hover) 0%, var(--shift-f-hover) 50%,
+      var(--shift-g-hover) 50%, var(--shift-g-hover) 100%);
+}
+
+/* Shift-active glow feedback on shift buttons */
+html[data-shift-state="f"] .key.shift-f::before,
+html[data-shift-state="f"] .key.shift-fg::before {
+  box-shadow: 0 0 8px var(--f-gold);
+}
+html[data-shift-state="g"] .key.shift-g::before,
+html[data-shift-state="g"] .key.shift-fg::before {
+  box-shadow: 0 0 8px var(--g-blue);
+}
+
+/* Blank/disabled key position (truly empty — no function assigned) */
+.key.key-blank { visibility: hidden; pointer-events: none; }
+
+/* Assignable but unassigned key (Norm_Key_00 position) — dashed hint */
+.key.key-assignable { pointer-events: auto; }
+.key.key-assignable::before {
+  border: 1px dashed var(--key-border);
+  opacity: 0.4;
+  background: transparent;
+}
+
+/* ASSIGN mode: pulse all non-blank keys to invite a key press */
+[data-assign-mode="1"] .key:not(.key-blank)::before {
+  animation: assign-pulse 1.5s ease-in-out infinite;
+}
+[data-assign-mode="1"] .key.pressed::before,
+[data-assign-mode="1"] .key:active::before { animation: none; }
+
+@keyframes assign-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(229, 174, 90, 0); }
+  50%       { box-shadow: 0 0 0 3px rgba(229, 174, 90, 0.4); }
+}
+
+html[data-keys-theme="hp-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg)::before,
+html[data-keys-theme="hp-10b-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg)::before,
+html[data-keys-theme="blue-steel-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg)::before {
+  background: transparent;
+  border-color: transparent;
+}
+html[data-keys-theme="hp-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg):hover::before,
+html[data-keys-theme="hp-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg):active::before,
+html[data-keys-theme="hp-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg).pressed::before,
+html[data-keys-theme="hp-10b-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg):hover::before,
+html[data-keys-theme="hp-10b-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg):active::before,
+html[data-keys-theme="hp-10b-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg).pressed::before,
+html[data-keys-theme="blue-steel-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg):hover::before,
+html[data-keys-theme="blue-steel-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg):active::before,
+html[data-keys-theme="blue-steel-clean"] .key:not(.shift-f):not(.shift-g):not(.shift-fg).pressed::before {
+  background: var(--key-hover);
+  border-color: transparent;
+}
+
+/* Letter labels (A..Z) sit to the right of each key, vertically
+   offset 18px below the button top (matches gtkGui.c:5716). */
+.key-letter {
+  position: absolute;
+  font: normal 18px/1 "C47StandardFont", system-ui, sans-serif;
+  color: var(--letter-grey);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* F- and G-shift labels sit just above the button. In GTK the widgets
+   sit 25px above button-top (Y_OFFSET_Aim) but GTK's labels have extra
+   visual gap from their own font metrics. Here we use the same 25px
+   offset and 18px font, baseline-aligned so the label sits flush to
+   the button below it. */
+.key-shift-row {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  font: normal 18px/1 "C47StandardFont", system-ui, sans-serif;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  gap: 4px;
+  line-height: 18px;
+  height: 18px;
+  overflow: visible;
+}
+.key-shift-row .shift-f { color: var(--f-gold); }
+.key-shift-row .shift-g { color: var(--g-blue); }
+/* HOME / MyM long-press indicators above the f and g keys use the plain
+   letter-grey colour instead of the shift gold/cyan. */
+.key-shift-row.longpress .shift-f,
+.key-shift-row.longpress .shift-g { color: var(--letter-grey); }
+/* Single-shift layouts (DM42, C47, N47, D47): only one physical gold shift
+   key. The fShifted labels ARE the physical gold labels — show them in
+   actual amber regardless of the active keys theme (which may assign a
+   non-gold colour to --f-gold, e.g. blue in Blue Steel). The gShifted
+   labels are C47-only extensions with no physical legend — hide them. */
+html[data-single-shift="1"] .key-shift-row .shift-f { color: #C9A800; }
+html[data-single-shift="1"] .key-shift-row .shift-g:not(.keys-access) { display: none; }
+html[data-single-shift="1"] .key-shift-row .shift-g.keys-access { color: var(--g-blue); }
+
+/* ---------- Toolbar ---------- */
+/* Right edge of the LCD cutout is x=502 in the skin; keep the toolbar
+   inside that so the Restore button doesn't overflow past the screen. */
+/* Toolbar: split into two groups that sit on the lit R-47 bar at the
+   bottom of the skin. Left group (LCD, Keys) hugs the left side of the
+   "R 47" logo; right group (Tape, Files) hugs the right side of the
+   "7". R-47 text spans ~x=218..265 in the 482-wide skin, so groups are
+   anchored with a few px breathing room on each side of the logo. */
+.toolbar-group {
+  position: absolute;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 10;
+}
+#toolbar-left  { right: 287px; }  /* right edge lands at x=195: aligns with grid line on the LEFT of the period key */
+#toolbar-right { left:  290px; }  /* left edge lands at x=290: aligns with grid line on the RIGHT of the period key */
+.toolbar-version {
+  display: inline-flex;
+  align-items: center;
+  padding-left: 4px;
+  color: var(--letter-grey);
+  font: 13px/1 "C47StandardFont", system-ui, sans-serif;
+  position: relative;
+  top: 2px;
+  left: 10px;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.toolbar-group button {
+  -webkit-appearance: none;
+  appearance: none;
+  /* Solid key-body background so the gold label stays readable on the
+     lighter R-47 bar beneath. */
+  background: var(--key-bg);
+  color: var(--f-gold);
+  border: 1px solid var(--f-gold);
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.3);
+  padding: 1px 8px;
+  font: 13px/1 "C47StandardFont", sans-serif;
+  cursor: pointer;
+}
+.toolbar-group button:hover {
+  background: var(--key-hover);
+  color: var(--key-label);
+  border-color: var(--f-hover-gold);
+}
+
+/* ---------- Printer tape ---------- */
+#printer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(420px, 90vw);
+  height: 100vh;
+  background: var(--popup-panel);
+  border-left: 1px solid var(--popup-border);
+  color: var(--popup-text);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.4);
+}
+#printer[hidden] { display: none; }
+#printer-head {
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--popup-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--popup-panel-head);
+}
+#printer-head span {
+  flex: 1;
+  font-weight: 600;
+  color: var(--popup-text);
+}
+#printer-head button {
+  background: var(--popup-button-bg);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-button-border);
+  border-radius: 3px;
+  padding: 3px 8px;
+  font: 11px/1 "C47StandardFont", sans-serif;
+  cursor: pointer;
+}
+#printer-head button:hover {
+  background: var(--popup-button-hover);
+  border-color: var(--popup-accent);
+}
+#printer-close {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+}
+#printer-tape {
+  flex: 1;
+  margin: 0;
+  padding: 10px 14px;
+  overflow-y: auto;
+  font: 12px/1.4 ui-monospace, "SF Mono", Consolas, monospace;
+  white-space: pre-wrap;
+  background: var(--popup-tape-bg);
+  color: var(--popup-tape-text);
+}
+
+/* iPhone safe-area insets are handled in shell.js fitScale() rather
+   than via body padding, because padding+position:fixed produces a
+   visually offset content area that doesn't center the calculator
+   through the transform correctly. */
+
+/* Install-to-home-screen banner. Shown on first visit in a mobile
+   browser (not when already running as a PWA via standalone mode).
+   Dismissed for the session via localStorage. */
+#install-banner {
+  position: fixed;
+  top: env(safe-area-inset-top, 0);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--skin-w) * var(--device-scale, 1));
+  max-width: 100vw;
+  background: rgba(32, 28, 24, 0.96);
+  color: var(--popup-text);
+  border-bottom: 1px solid var(--popup-accent);
+  padding: 8px 12px;
+  font: 12px/1.3 "C47StandardFont", system-ui, sans-serif;
+  z-index: 30;
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+}
+#install-banner[hidden] { display: none; }
+.install-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.install-text { flex: 1; font-weight: 600; }
+.install-hint { color: var(--popup-accent); font-size: 11px; display: none; }
+html.is-ios     #install-banner .install-hint[data-ios]     { display: inline; }
+html.is-android #install-banner .install-hint[data-android] { display: inline; }
+#install-btn {
+  background: var(--popup-accent);
+  color: #1f1812;
+  border: 1px solid var(--popup-accent);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font: 12px/1 "C47StandardFont", sans-serif;
+  cursor: pointer;
+}
+#install-btn:hover {
+  filter: brightness(1.06);
+}
+#install-dismiss {
+  background: transparent;
+  border: 0;
+  color: var(--popup-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+#install-dismiss:hover,
+#theme-close:hover {
+  color: var(--popup-text);
+}
+
+/* ---------- Theme picker modal ---------- */
+#theme-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+#theme-modal[hidden] { display: none; }
+.theme-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.12);
+  z-index: 0;
+}
+.theme-panel {
+  position: relative;
+  z-index: 1;
+  background: var(--popup-panel);
+  color: var(--popup-text);
+  border-right: 1px solid var(--popup-border);
+  border-radius: 0 8px 8px 0;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+  transform: translateZ(0);
+  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.theme-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--popup-border);
+  background: var(--popup-panel-head);
+  font: 13px/1 "C47StandardFont", system-ui, sans-serif;
+  font-weight: 600;
+}
+.theme-head span { flex: 1; }
+#theme-close {
+  background: transparent;
+  border: 0;
+  color: var(--popup-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.theme-controls {
+  padding: 10px 14px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--popup-text);
+  font: 12px/1 "C47StandardFont", system-ui, sans-serif;
+  user-select: none;
+}
+.theme-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--popup-accent);
+}
+.theme-grid {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  overflow-y: auto;
+}
+.theme-tile {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--popup-surface);
+  border: 1px solid var(--popup-border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--popup-text);
+  font: 12px/1.2 "C47StandardFont", system-ui, sans-serif;
+  transition: border-color 120ms, transform 80ms;
+}
+.theme-tile:hover {
+  background: var(--popup-surface-hover);
+  border-color: var(--popup-accent);
+}
+.theme-tile.selected {
+  border-color: var(--popup-accent);
+  box-shadow: 0 0 0 1px var(--popup-accent);
+}
+.theme-tile:active { transform: scale(0.98); }
+.theme-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.theme-swatch > span { display: block; }
+.theme-name { font-weight: 600; }
+.theme-kind {
+  font-size: 10px;
+  color: var(--popup-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ---------- Theme picker: narrower panel on phones ---------------------- */
+@media (max-width: 520px) {
+  .theme-panel {
+    width: 180px;
+  }
+}
+
+/* ---------- Preview modal (Exports tab: view .tsv/.csv/.txt in-app) ---- */
+#preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 41;  /* above Files modal */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#preview-modal[hidden] { display: none; }
+.preview-panel {
+  position: relative;
+  background: var(--popup-panel);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-border);
+  border-radius: 8px;
+  width: min(92vw, 620px);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  transform: translateZ(0);
+  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+#preview-body {
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  font: 12px/1.4 ui-monospace, "SF Mono", Consolas, monospace;
+  white-space: pre;
+  background: var(--popup-tape-bg, #f5f0e8);
+  color: var(--popup-tape-text, #222);
+  flex: 1;
+  min-height: 120px;
+  border-top: 1px solid var(--popup-border);
+  border-bottom: 1px solid var(--popup-border);
+}
+#preview-close { background: transparent; border: 0; color: var(--popup-muted); font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px; }
+
+/* ---------- Files picker modal (Programs / States) ---------- */
+#files-modal, #name-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#files-modal[hidden], #name-modal[hidden] { display: none; }
+.files-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--popup-backdrop);
+  backdrop-filter: blur(4px);
+}
+.files-panel {
+  position: relative;
+  background: var(--popup-panel);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-border);
+  border-radius: 8px;
+  width: min(92vw, 520px);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  transform: translateZ(0);
+  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.files-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--popup-border);
+  background: var(--popup-panel-head);
+  font: 13px/1 "C47StandardFont", system-ui, sans-serif;
+  font-weight: 600;
+}
+.files-head span { flex: 1; }
+#files-close, #name-close {
+  background: transparent;
+  border: 0;
+  color: var(--popup-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.files-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid var(--popup-border);
+}
+.files-tab {
+  background: transparent;
+  color: var(--popup-muted);
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 6px 14px;
+  font: 12px/1 "C47StandardFont", system-ui, sans-serif;
+  cursor: pointer;
+}
+.files-tab[aria-selected="true"] {
+  background: var(--popup-panel);
+  color: var(--popup-text);
+  border-color: var(--popup-border);
+  position: relative;
+  top: 1px;
+}
+.files-list {
+  padding: 10px 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 120px;
+}
+.files-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  background: var(--popup-surface);
+  border: 1px solid var(--popup-border);
+  border-radius: 5px;
+  color: var(--popup-text);
+  font: 13px/1.2 "C47StandardFont", system-ui, sans-serif;
+  transition: background 80ms, border-color 80ms;
+}
+.files-row:hover { background: var(--popup-surface-hover); border-color: var(--popup-accent); }
+.files-row .row-main {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+.files-row .row-size { color: var(--popup-muted); font-size: 11px; }
+.files-row .row-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--popup-muted);
+  cursor: pointer;
+  padding: 4px 7px;
+  font: 13px/1 system-ui, sans-serif;
+}
+.files-row .row-btn:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--popup-text);
+  border-color: var(--popup-border);
+}
+.files-row .row-btn.row-del:hover { color: #ff6b6b; border-color: #ff6b6b; }
+.files-empty {
+  padding: 20px 14px;
+  color: var(--popup-muted);
+  font: 12px/1.4 "C47StandardFont", system-ui, sans-serif;
+  text-align: center;
+}
+.files-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-top: 1px solid var(--popup-border);
+  background: var(--popup-panel-head);
+}
+.files-action-btn {
+  background: var(--popup-button-bg);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-button-border);
+  border-radius: 5px;
+  padding: 7px 12px;
+  font: 12px/1 "C47StandardFont", system-ui, sans-serif;
+  cursor: pointer;
+}
+.files-action-btn:hover { background: var(--popup-button-hover); }
+.files-action-btn[hidden] { display: none; }
+
+/* Backup tab: information panel + bulk actions. */
+.backup-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 4px;
+}
+.backup-info {
+  background: var(--popup-surface);
+  border: 1px solid var(--popup-border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font: 12px/1.5 "C47StandardFont", system-ui, sans-serif;
+  color: var(--popup-text);
+}
+.backup-info h4 {
+  margin: 0 0 8px;
+  font: 13px/1 "C47StandardFont", system-ui, sans-serif;
+  color: var(--popup-accent);
+}
+.backup-info dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; }
+.backup-info dt { color: var(--popup-muted); }
+.backup-info dd { margin: 0; text-align: right; }
+.backup-info p {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--popup-muted);
+  line-height: 1.4;
+}
+
+/* Name-prompt modal (used for SAVEST / WRITEP / EXPORTP) */
+.name-panel {
+  position: relative;
+  background: var(--popup-panel);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-border);
+  border-radius: 8px;
+  width: min(90vw, 380px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  transform: translateZ(0);
+  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.name-form { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+#name-input {
+  background: var(--popup-surface);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-border);
+  border-radius: 5px;
+  padding: 9px 11px;
+  font: 14px/1.2 "C47StandardFont", system-ui, sans-serif;
+  outline: none;
+}
+#name-input:focus { border-color: var(--popup-accent); }
+.name-hint { color: var(--popup-muted); font: 11px/1.3 "C47StandardFont", sans-serif; }
+.name-buttons { display: flex; justify-content: flex-end; gap: 6px; }
+.name-btn {
+  background: var(--popup-button-bg);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-button-border);
+  border-radius: 5px;
+  padding: 7px 14px;
+  font: 12px/1 "C47StandardFont", system-ui, sans-serif;
+  cursor: pointer;
+}
+.name-btn:hover { background: var(--popup-button-hover); }
+.name-btn-primary {
+  background: var(--popup-accent);
+  color: #1a140a;
+  border-color: var(--popup-accent);
+}
+
+/* ===== Dual-binary family-switch overlay =====
+   Shown by shell.js's r47RequestFamilyReload() during the ~1-3 sec
+   window between saveCalc() and window.location.reload(). The overlay
+   must claim pointer events (otherwise clicks on the calc keys
+   underneath could mutate state AFTER the save but BEFORE the reload,
+   silently losing work). We also set html[data-switching="1"] so any
+   events that bypass the overlay (e.g., keyboard shortcuts wired on
+   window) can be gated by CSS on #device. */
+.r47-switch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(20, 20, 20, 0.65);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "C47StandardFont", system-ui, sans-serif;
+  font-size: 1.2em;
+  pointer-events: all;
+  animation: r47-switch-fadein 120ms ease-out;
+}
+.r47-switch-msg {
+  padding: 1em 1.5em;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+@keyframes r47-switch-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* While a family switch is in flight, gate the whole calc body from
+   receiving pointer or keyboard events. Belt-and-suspenders with the
+   overlay's pointer-events: all. */
+html[data-switching="1"] #device { pointer-events: none; }
+
+/* Cross-family compatibility footer in the Files modal (Programs/States
+   tabs). Low-contrast so it doesn't compete with the file list itself,
+   but readable. */
+.files-compat-note {
+  margin-top: 12px;
+  padding: 8px 10px;
+  font: 11px/1.4 "C47StandardFont", system-ui, sans-serif;
+  color: var(--popup-text, #ccc);
+  opacity: 0.72;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 2px solid var(--popup-accent, #888);
+  border-radius: 2px;
+}
+
+/* Snackbar styles */
+#snackbar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(200px);
+  background-color: #333;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.3s ease;
+  font-family: var(--font-sans);
+}
+
+#snackbar.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 520px) {
+  #snackbar {
+    bottom: 80px;
+    width: 90%;
+    max-width: 400px;
+  }
+}
+
+#snackbar-action-btn {
+  background-color: var(--f-gold);
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Settings Modal styles */
+#settings-modal .settings-panel {
+  position: relative;
+  background: var(--popup-panel);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-border);
+  border-radius: 8px;
+  width: min(90vw, 400px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.settings-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-row label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--popup-text);
+}
+
+.settings-row input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.settings-row input[type="range"] {
+  flex: 1;
+  max-width: 150px;
+}
+
+.settings-body h3 {
+  margin: 10px 0 5px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--popup-accent);
+  border-bottom: 1px solid var(--popup-border);
+  padding-bottom: 3px;
+}
+
+.work-dir-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.work-dir-controls button {
+  background: var(--popup-button-bg);
+  color: var(--popup-text);
+  border: 1px solid var(--popup-button-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+#work-directory-status {
+  font-size: 10px;
+  color: var(--popup-muted);
+}
+
+.danger-btn {
+  background-color: #a54040 !important;
+  color: #fff !important;
+  border-color: #8a3030 !important;
+  width: 100%;
+  padding: 8px !important;
+}
+
+.danger-btn:hover {
+  background-color: #b55050 !important;
+}

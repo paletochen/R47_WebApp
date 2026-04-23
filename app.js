@@ -1,7 +1,61 @@
 console.log("R47 Calculator Web App initialized - v2");
 
+function dbg(s) {
+    console.log("[R47 app] " + s);
+}
+
+
 const canvas = document.getElementById('lcd');
 const ctx = canvas.getContext('2d');
+
+// Tone queue for sequential playback
+window.toneQueue = [];
+window.toneQueueProcessing = false;
+
+window.processToneQueue = async () => {
+    if (window.toneQueueProcessing) return;
+    window.toneQueueProcessing = true;
+    try {
+        while (window.toneQueue.length > 0) {
+            const item = window.toneQueue.shift();
+            await playTone(item.freq, item.ms);
+            await new Promise(resolve => setTimeout(resolve, 50)); // Gap between tones
+        }
+    } catch (e) {
+        console.error("Error processing tone queue:", e);
+    } finally {
+        window.toneQueueProcessing = false;
+    }
+};
+
+async function playTone(frequency, ms_delay) {
+    try {
+        if (!window.audioCtx) {
+            window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (window.audioCtx.state === 'suspended') {
+            await window.audioCtx.resume();
+        }
+        const oscillator = window.audioCtx.createOscillator();
+        const gainNode = window.audioCtx.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(frequency / 1000, window.audioCtx.currentTime);
+        const volume = (window.beeperVolume || 50) / 100;
+
+        gainNode.gain.setValueAtTime(volume, window.audioCtx.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(window.audioCtx.destination);
+        oscillator.start();
+        await new Promise(resolve => setTimeout(resolve, ms_delay));
+        oscillator.stop();
+        oscillator.disconnect();
+        gainNode.disconnect();
+    } catch (e) {
+        console.error("Error playing tone:", e);
+    }
+}
+
+
 
 function initCalculator() {
     const width = 400;
@@ -11,8 +65,9 @@ function initCalculator() {
     Module._init_lcd_buffers();
     
     Module._web_init();
-    startRenderLoop(width, height);
+    // startRenderLoop(width, height);
 }
+
 
 function startRenderLoop(width, height) {
     // Call tick on a high-frequency interval (every 5ms) to drive core timers
@@ -79,88 +134,56 @@ async function handleSnap() {
     }
 }
 
-window.r47RequestFile = async (kind) => {
-    console.log("window.r47RequestFile called with kind:", kind);
-    if (kind === 'snap-file') {
-        return new Promise((resolve) => {
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border:2px solid black;z-index:1000;';
-            modal.innerHTML = `
-                <p>Save SNAP screenshot?</p>
-                <button id="modal-save">Save</button>
-                <button id="modal-cancel">Cancel</button>
-            `;
-            document.body.appendChild(modal);
-            
-            document.getElementById('modal-save').onclick = async () => {
-                document.body.removeChild(modal);
-                try {
-                    const workDir = window.workDirHandle;
-                    let startInDir = undefined;
-                    if (workDir) {
-                        try {
-                            startInDir = await workDir.getDirectoryHandle('SCREENS');
-                        } catch (e) {
-                            console.warn("Failed to get directory handle for SCREENS:", e.message);
-                        }
-                    }
-                    
-                    // Trigger screen dump in core to populate buffer
-                    Module.ccall('r47_snap_named', null, ['string'], ['SNAP.bmp'], { async: true });
-                    
-                    // Get buffer pointer and size from WASM
-                    const ptr = Module._getSnapBufferPtr();
-                    const size = Module._getSnapBufferSize();
-                    
-                    if (ptr === 0 || size === 0) {
-                        console.error('Failed to get SNAP data from WASM');
-                        resolve(false);
-                        return;
-                    }
-                    
-                    const data = new Uint8Array(Module.HEAPU8.buffer, ptr, size);
 
-                    if ('showSaveFilePicker' in window) {
-                        const handle = await window.showSaveFilePicker({
-                            suggestedName: 'SNAP.bmp',
-                            types: [{
-                                description: 'BMP Image',
-                                accept: {'image/bmp': ['.bmp']},
-                            }],
-                            startIn: startInDir
-                        });
-                        
-                        const writable = await handle.createWritable();
-                        await writable.write(data);
-                        await writable.close();
-                        console.log('SNAP file saved successfully via JS');
-                    } else {
-                        // Fallback for iOS / Safari
-                        const blob = new Blob([data], { type: 'image/bmp' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'SNAP.bmp';
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        console.log('SNAP file downloaded as fallback');
-                    }
-                    
-                    resolve(true);
-                } catch (e) {
-                    console.error('Failed to pick file in modal:', e);
-                    resolve(false);
+
+
+// Callback from C when a file is closed after writing
+window.onFileSaved = async (path) => {
+    console.log("window.onFileSaved called for path:", path);
+    try {
+        const data = Module.FS.readFile(path);
+        const filename = path.split('/').pop();
+        
+        const workDir = window.workDirHandle;
+        if (workDir) {
+            try {
+                let dirHandle = workDir;
+                if (path.includes('/SAVFILES/')) {
+                    dirHandle = await workDir.getDirectoryHandle('SAVFILES', { create: true });
+                } else if (path.includes('/STATE/')) {
+                    dirHandle = await workDir.getDirectoryHandle('STATE', { create: true });
+                } else if (path.includes('/PROGRAMS/')) {
+                    dirHandle = await workDir.getDirectoryHandle('PROGRAMS', { create: true });
+                } else if (path.includes('/SCREENS/')) {
+                    dirHandle = await workDir.getDirectoryHandle('SCREENS', { create: true });
                 }
-            };
-            
-            document.getElementById('modal-cancel').onclick = () => {
-                document.body.removeChild(modal);
-                resolve(false);
-            };
-        });
+                
+                const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(data);
+                await writable.close();
+                console.log(`File ${filename} saved to workspace directory.`);
+                return;
+            } catch (e) {
+                console.warn("Failed to save to workspace directory, falling back to download:", e);
+            }
+        }
+        
+        if (!('showSaveFilePicker' in window)) {
+            const blob = new Blob([data], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            console.log(`File ${path} downloaded automatically.`);
+        }
+    } catch (e) {
+        console.error(`Failed to handle file save for ${path}:`, e);
     }
-    return false;
 };
+
 
 // Add event listeners for physical buttons
 function initKeyboard() {
@@ -187,15 +210,17 @@ function initKeyboard() {
         const isFn = btn.classList.contains('soft-btn');
         
         // Handle mouse down / touch start
-        const onPress = (e) => {
-            e.preventDefault();
-            performHapticClick();
+        const onPress = async (e) => {
             if (!window.audioCtx) {
                 window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
             if (window.audioCtx.state === 'suspended') {
-                window.audioCtx.resume();
+                await window.audioCtx.resume();
             }
+            e.preventDefault();
+            performHapticClick();
+
+
             console.log("Pressing key:", keyId, "isFn:", isFn);
             
 
@@ -323,7 +348,8 @@ window.downloadFileFromFS = (path, suggestedName) => {
 function initSettings() {
     const modal = document.getElementById('settings-modal');
     const display = document.getElementById('lcd');
-    const closeBtn = document.querySelector('.close-btn');
+    const closeBtn = document.getElementById('settings-close');
+
 
     // Open modal when display is clicked
     display.addEventListener('click', (e) => {
@@ -353,9 +379,12 @@ function initSettings() {
     // Close clipboard modal
     const closeClipBtn = document.getElementById('close-clipboard');
     const clipModal = document.getElementById('clipboard-modal');
-    closeClipBtn.addEventListener('click', () => {
-        clipModal.style.display = 'none';
-    });
+    if (closeClipBtn && clipModal) {
+        closeClipBtn.addEventListener('click', () => {
+            clipModal.style.display = 'none';
+        });
+    }
+
 
     // Close modals when clicking outside
     window.addEventListener('click', (e) => {
@@ -363,9 +392,10 @@ function initSettings() {
             modal.style.display = 'none';
             saveSettings();
         }
-        if (e.target === clipModal) {
+        if (clipModal && e.target === clipModal) {
             clipModal.style.display = 'none';
         }
+
     });
 
     // File I/O actions
@@ -385,35 +415,37 @@ function initSettings() {
         });
     }
 
-    // Clipboard actions
-    document.getElementById('copy-x-btn').addEventListener('click', async () => {
-        clipModal.style.display = 'none';
-        try {
-            const xVal = Module.ccall('getXRegisterString', 'string', []);
-            await navigator.clipboard.writeText(xVal);
-            alert(`Copied X: ${xVal}`);
-        } catch (err) {
-            console.error('Failed to copy X register:', err);
-        }
-    });
-
-    document.getElementById('paste-number-btn').addEventListener('click', async () => {
-        clipModal.style.display = 'none';
-        try {
-            const text = await navigator.clipboard.readText();
-            for (const char of text) {
-                const keyId = getKeyIdFromChar(char);
-                if (keyId) {
-                    sendKey(keyId, false, false); // Pressed
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                    sendKey(keyId, false, true); // Released
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                }
+    if (clipModal) {
+        document.getElementById('copy-x-btn').addEventListener('click', async () => {
+            clipModal.style.display = 'none';
+            try {
+                const xVal = Module.ccall('getXRegisterString', 'string', []);
+                await navigator.clipboard.writeText(xVal);
+                alert(`Copied X: ${xVal}`);
+            } catch (err) {
+                console.error('Failed to copy X register:', err);
             }
-        } catch (err) {
-            console.error('Failed to read clipboard:', err);
-        }
-    });
+        });
+
+        document.getElementById('paste-number-btn').addEventListener('click', async () => {
+            clipModal.style.display = 'none';
+            try {
+                const text = await navigator.clipboard.readText();
+                for (const char of text) {
+                    const keyId = getKeyIdFromChar(char);
+                    if (keyId) {
+                        sendKey(keyId, false, false); // Pressed
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        sendKey(keyId, false, true); // Released
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+            }
+        });
+    }
+
 
     function getKeyIdFromChar(char) {
         switch (char.toLowerCase()) {
@@ -442,38 +474,91 @@ function initSettings() {
 
     workDirBtn.addEventListener('click', async () => {
         try {
+            dbg('workDirBtn clicked');
             let handle;
             if ('showDirectoryPicker' in window) {
                 handle = await window.showDirectoryPicker();
                 workDirStatus.innerText = handle.name;
                 localStorage.setItem('work-directory-selected', 'true');
+                await handleDirectorySelection(handle);
             } else {
                 alert("Directory picking is not supported on this browser/iOS. Caching state will still work locally.");
             }
-            window.workDirHandle = handle;
-            await createSubfoldersInDirectory(handle);
         } catch (err) {
-            console.error("Directory picker failed:", err);
+            dbg('Directory picker failed: ' + err.message);
         }
     });
+
+    async function handleDirectorySelection(handle) {
+        dbg('Directory selected: ' + handle.name);
+        window.workDirHandle = handle;
+        await createSubfoldersInDirectory(handle);
+        
+        dbg('Auto-load scan started');
+        try {
+            const savFilesDir = await handle.getDirectoryHandle('SAVFILES', { create: false });
+            const fileHandle = await savFilesDir.getFileHandle('R47.sav', { create: false });
+            const file = await fileHandle.getFile();
+            const buffer = await file.arrayBuffer();
+            const data = new Uint8Array(buffer);
+            
+            const path = '/persist/SAVFILES/R47.sav';
+            Module.FS.writeFile(path, data);
+            dbg('Auto-loaded R47.sav from physical folder.');
+        } catch (e) {
+
+            dbg('No R47.sav found in physical folder or failed to read: ' + e.message);
+        }
+    }
 
     factoryResetBtn.addEventListener('click', () => {
         if (confirm("Are you sure you want to reset to factory defaults? All data will be lost!")) {
             localStorage.clear();
-            Module.FS.unmount('/persistent');
-            location.reload();
+            
+            // Unregister Service Workers and clear caches
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+            
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let name of names) caches.delete(name);
+                });
+            }
+
+            // Delete IndexedDB databases to clear IDBFS data
+            window.indexedDB.deleteDatabase("/persist");
+            const DBDeleteRequest = window.indexedDB.deleteDatabase("r47-db");
+
+
+            
+            DBDeleteRequest.onerror = function(event) {
+                console.error("Error deleting database r47-db:", event);
+                location.reload();
+            };
+            
+            DBDeleteRequest.onsuccess = function(event) {
+                console.log("Database r47-db deleted successfully");
+                location.reload();
+            };
         }
     });
 
+
     async function createSubfoldersInDirectory(handle) {
         try {
+            dbg('Subfolders creation started');
             await handle.getDirectoryHandle('STATE', { create: true });
             await handle.getDirectoryHandle('PROGRAMS', { create: true });
             await handle.getDirectoryHandle('SAVFILES', { create: true });
             await handle.getDirectoryHandle('SCREENS', { create: true });
-            console.log("Subfolders created in Work Directory");
+            dbg("Subfolders created in Work Directory");
         } catch (e) {
-            console.error("Failed to create subfolders in Work Directory:", e.message);
+            dbg("Failed to create subfolders in Work Directory: " + e.message);
         }
     }
 
@@ -488,15 +573,16 @@ function initSettings() {
             
             const actionBtn = document.getElementById('snackbar-action-btn');
             actionBtn.onclick = async () => {
+
+                dbg('Snackbar action clicked');
                 snackbar.classList.remove('show');
                 try {
                     const handle = await window.showDirectoryPicker();
                     workDirStatus.innerText = handle.name;
                     localStorage.setItem('work-directory-selected', 'true');
-                    window.workDirHandle = handle;
-                    await createSubfoldersInDirectory(handle);
+                    await handleDirectorySelection(handle);
                 } catch (err) {
-                    console.error("Directory picker failed:", err);
+                    dbg("Directory picker failed: " + err.message);
                 }
             };
         }
@@ -540,8 +626,26 @@ function initSettings() {
     }
 
     async function applySettings() {
-        window.beeperVolume = document.getElementById('beeper-volume').value;
-        window.isBeeperEnabled = document.getElementById('beeper-enabled').checked;
+        if (!window.audioCtx) {
+            window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (window.audioCtx.state === 'suspended') {
+            window.audioCtx.resume();
+        }
+
+        if (window.Module) {
+
+            window.Module.beeperVolume = document.getElementById('beeper-volume').value;
+            window.Module.isBeeperEnabled = document.getElementById('beeper-enabled').checked;
+            window.Module.hapticEnabled = document.getElementById('haptic-enabled').checked;
+            window.Module.hapticHifi = document.getElementById('haptic-hifi').checked;
+            window.Module.hapticIntensity = document.getElementById('haptic-intensity').value;
+        }
+
+
+
+
+
         
         const keepScreenOn = document.getElementById('keep-screen-on').checked;
         if (keepScreenOn) {
@@ -560,13 +664,41 @@ function initSettings() {
                 console.log('Wake Lock released');
             }
         }
+        
+        // Re-acquire wake lock when page becomes visible again
+        document.addEventListener('visibilitychange', async () => {
+            if (window.wakeLock === null && document.visibilityState === 'visible') {
+                const keepScreenOn = document.getElementById('keep-screen-on').checked;
+                if (keepScreenOn) {
+                    try {
+                        window.wakeLock = await navigator.wakeLock.request('screen');
+                        console.log('Wake Lock re-acquired');
+                    } catch (err) {
+                        console.warn(`Wake Lock re-acquisition failed: ${err.name}, ${err.message}`);
+                    }
+                }
+            }
+        });
     }
+
     
     // Initial apply
     loadSettings();
     applySettings();
     checkWorkDirectory();
+
+    // Real-time updates for audio settings
+    document.getElementById('beeper-enabled').addEventListener('change', saveSettings);
+    document.getElementById('beeper-volume').addEventListener('input', saveSettings);
+    document.getElementById('beeper-volume').addEventListener('change', saveSettings);
+    document.getElementById('haptic-enabled').addEventListener('change', saveSettings);
+    document.getElementById('haptic-hifi').addEventListener('change', saveSettings);
+    document.getElementById('haptic-intensity').addEventListener('input', saveSettings);
+    document.getElementById('haptic-intensity').addEventListener('change', saveSettings);
+
+
 }
+
 
 // Initialize if WASM is already loaded, otherwise wait for hook
 if (window.wasmInitialized) {
@@ -603,7 +735,8 @@ function performHapticClick() {
 }
 
 function updateAlphaLabels() {
-    const isAlpha = Module.ccall('isAlphaMode', 'boolean', []);
+    const isAlpha = false; // Mocked as false because isAlphaMode is not exported
+
     const buttons = document.querySelectorAll('.btn');
     
     const alphaGoldMapping = {
@@ -710,12 +843,12 @@ function updateAlphaLabels() {
 }
 
 // Auto-save state every 5 seconds
-setInterval(() => {
-    if (Module && Module.ccall) {
-        console.log("Auto-saving state...");
-        Module.ccall('saveCalc', null, []);
-    }
-}, 5000);
+// setInterval(() => {
+//     if (Module && Module.ccall) {
+//         // console.log("Auto-saving state...");
+//         Module.ccall('saveCalc', null, []);
+//     }
+// }, 5000);
 
 function handleLongPress(keyId) {
     if (keyId === '10') { // f key
@@ -726,3 +859,5 @@ function handleLongPress(keyId) {
         Module.ccall('openMyMenu', null, []);
     }
 }
+
+dbg('app.js executed');
