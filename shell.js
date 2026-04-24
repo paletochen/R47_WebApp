@@ -6,7 +6,9 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.90';
+const WEB_VERSION = '3.92';
+
+
 
 
 
@@ -735,10 +737,16 @@ async function boot() {
   for (const k of keys) {
     const container = document.createElement('div');
     container.className = 'key-container';
+    const isFKey = k.fn;
+    const heightScale = isFKey ? 1.0 : 1.20;
+    const newH = k.h * heightScale;
+    const newY = isFKey ? k.y : (k.y + k.h - newH);
+
     container.style.left   = (k.x - HIT_PAD) + 'px';
-    container.style.top    = (k.y - HIT_PAD) + 'px';
+    container.style.top    = (newY - HIT_PAD) + 'px';
     container.style.width  = (k.w + 2*HIT_PAD) + 'px';
-    container.style.height = (k.h + 2*HIT_PAD) + 'px';
+    container.style.height = (newH + 2*HIT_PAD) + 'px';
+
     container.dataset.idx  = k.idx;
 
     const btn = document.createElement('button');
