@@ -26,7 +26,9 @@ const CORE = [
   'index.html',
   'main.css',
   'shell.js',
+  'app.js',
   'wasm/c47-web-r47.js',
+
   'wasm/c47-web-r47.wasm',
   'wasm/c47-web-r47.data',
   'manifest.webmanifest',
@@ -61,8 +63,9 @@ self.addEventListener('activate', (ev) => {
 });
 
 async function cacheFirst(req, url) {
-  const cached = await caches.match(req);
+  const cached = await caches.match(req, { ignoreSearch: true });
   if (cached) return cached;
+
   try {
     const fresh = await fetch(req);
     if (fresh.ok && url.origin === self.location.origin) {
@@ -94,6 +97,13 @@ self.addEventListener('fetch', (ev) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
+  // Handle root URL mapping to index.html for offline access
+  if (url.origin === self.location.origin && (url.pathname === '/' || url.pathname === '/index.html')) {
+    ev.respondWith(caches.match('index.html', { ignoreSearch: true }).then(cached => cached || cacheFirst(req, url)));
+    return;
+  }
+
+
   if (url.origin === self.location.origin && url.pathname.startsWith('/r47_calculator_explorer/')) {
     ev.respondWith(networkFirst(req, url));
     return;
@@ -101,3 +111,4 @@ self.addEventListener('fetch', (ev) => {
 
   ev.respondWith(cacheFirst(req, url));
 });
+
