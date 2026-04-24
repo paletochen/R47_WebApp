@@ -6,7 +6,9 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.26';
+const WEB_VERSION = '3.28';
+
+
 
 
 
@@ -911,12 +913,14 @@ async function boot() {
     mod.FS.mkdir('/persist');
   } catch (e) { /* exists */ }
   mod.FS.mount(mod.IDBFS, {}, '/persist');
-  await new Promise((resolve) => {
+  window.idbfsMountedPromise = new Promise((resolve) => {
     mod.FS.syncfs(true, (err) => {
       if (err) dbg('IDBFS hydrate: ' + err);
       resolve();
     });
   });
+  await window.idbfsMountedPromise;
+
   dbg('IDBFS mounted');
   
   // Ensure required directories exist in the virtual filesystem
@@ -1116,7 +1120,9 @@ if ('showDirectoryPicker' in window) {
   };
 
   dbg('r47.init()...');
+  await window.idbfsMountedPromise;
   r47.init();
+
   // dbg('screen ptr=' + r47.screen_ptr() + ' stride=' + r47.screen_stride());
 
 
@@ -1162,12 +1168,13 @@ if ('showDirectoryPicker' in window) {
   // each other under the same filename (their file headers diverge —
   // R47_save_file_00 vs C47_save_file_00 — so a wrong-family load would
   // error anyway). See docsmd/firmwarekeys.md §8b.
-  function calcFamilyName() {
+  window.calcFamilyName = function() {
     const m = r47.calc_model();
     if (m === 46) return 'C47';      // USER_C47
     if (m === 45) return 'DM42';     // USER_DM42
     return 'R47';                    // USER_R47f_g/bk_fg/fg_bk/fg_g (61..64)
-  }
+  };
+
 
   // Layout → default [keysTheme, lcdTheme] pairing.
   // All four R47 shift variants get explicit entries so applyPairedTheme
@@ -2289,8 +2296,9 @@ if ('showDirectoryPicker' in window) {
         break;
       }
       case 'save-state': {
-        let name = 'mystate-' + calcFamilyName() + '.s47';
+        let name = 'mystate-' + window.calcFamilyName() + '.s47';
         if (window.workDirHandle) {
+
           try {
             const subHandle = await getSubfolderHandle('STATE');
             const fileHandle = await window.showSaveFilePicker({
