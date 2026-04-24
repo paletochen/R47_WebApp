@@ -6,7 +6,10 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.30';
+const WEB_VERSION = '3.34';
+
+
+
 
 
 
@@ -2285,7 +2288,7 @@ if ('showDirectoryPicker' in window) {
             return;
           } catch (e) {
             console.error("File picker failed:", e);
-            // Fallback to modal
+            // Fallback to file input
           }
         }
         const input = document.createElement('input');
@@ -2304,6 +2307,7 @@ if ('showDirectoryPicker' in window) {
         break;
       }
       case 'save-program': {
+
         let name = 'mypgm.p47';
         try {
           const currentProgNum = r47.current_program_number();
@@ -2465,14 +2469,34 @@ if ('showDirectoryPicker' in window) {
             return;
           } catch (e) {
             console.error("File picker failed:", e);
-            // Fallback
           }
         }
-        // Fallback: just tell engine to save to default name
-        mod.ccall('r47_snap_named', null, ['string'], [name], { async: true });
-        mod.FS.syncfs(false, () => {});
+        // Fallback: trigger snap and download
+        {
+          await mod.ccall('r47_snap_named', null, ['string'], ['SNAP.bmp'], { async: true });
+
+          
+          const ptr = mod._getSnapBufferPtr();
+          const size = mod._getSnapBufferSize();
+          
+          if (ptr === 0 || size === 0) {
+            console.error('Failed to get SNAP data from WASM');
+            return;
+          }
+          
+          const data = new Uint8Array(mod.HEAPU8.buffer, ptr, size);
+          const blob = new Blob([data], { type: 'image/bmp' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = name;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
         break;
+
       }
+
     }
   };
 
