@@ -64,7 +64,10 @@
   --shift-g-hover:     linear-gradient(to bottom, #6cd1ef 0%, #42c1e6 100%);
   --shift-g-label:     #000000;
   --skin-filter:       none;
-  --lcd-bg:            #e2f0d9;
+  --lcd-bg:            #f4f4f4;
+
+
+
   --popup-backdrop:    rgba(0,0,0,0.55);
   --popup-panel:       #201c18;
   --popup-panel-head:  #2a241e;
@@ -447,7 +450,11 @@ html[data-fill-width="1"] #device {
   height: 294px;
   background: var(--lcd-bg);
   z-index: 1;
+  filter: grayscale(0.8) brightness(1.1);
 }
+
+
+
 html[data-lcd-render="pixelated"] #lcd {
   image-rendering: -moz-crisp-edges;
   image-rendering: -webkit-optimize-contrast;
@@ -642,16 +649,18 @@ html[data-lcd-render="smooth"] #lcd {
 .key.shift-fg { color: var(--shift-f-label); font-size: 24px; }
 .key.shift-fg::before {
   background: linear-gradient(110deg,
-      var(--shift-f-bg) 0%, var(--shift-f-bg) 50%,
-      var(--shift-g-bg) 50%, var(--shift-g-bg) 100%);
+      var(--f-gold) 0%, var(--f-gold) 50%,
+      var(--g-blue) 50%, var(--g-blue) 100%) !important;
 }
 .key.shift-fg:hover::before,
 .key.shift-fg:active::before,
 .key.shift-fg.pressed::before {
   background: linear-gradient(110deg,
-      var(--shift-f-hover) 0%, var(--shift-f-hover) 50%,
-      var(--shift-g-hover) 50%, var(--shift-g-hover) 100%);
+      var(--f-hover-gold) 0%, var(--f-hover-gold) 50%,
+      var(--g-hover-blue) 50%, var(--g-hover-blue) 100%) !important;
 }
+
+
 
 /* Shift-active glow feedback on shift buttons */
 html[data-shift-state="f"] .key.shift-f::before,

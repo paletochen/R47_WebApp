@@ -6,7 +6,53 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.34';
+const WEB_VERSION = '3.73';
+
+
+
+
+
+
+/* Key Mapping Reference (Index to Primary Label in C47):
+ * 0: Σ+      1: 1/x     2: √x      3: LOG     4: LN      5: XEQ
+ * 6: STO     7: RCL     8: R↓      9: SIN     10: COS    11: TAN
+ * (Note: In R47 mode, 10 is f and 11 is g. In C47, 27 is f/g)
+ * 
+ * Format for adding multiple keys per section:
+ * Use comma-separated key-value pairs (standard JS object syntax).
+ * e.g., separate: { 6: 5, 7: 5, 27: 3 }
+ */
+const LABEL_OFFSETS = {
+
+  'R47': {
+    separate: {}, // e.g., 10: 5 (key index: offset in px)
+    closer: {9: 2, 13: 5, 14: 5, 18: 2, 19: 2, 20: 2, 21: 2, 22: 3, 23: 2, 24: 2, 25: 2, 26:2, 27:2, 28:2, 29:2, 30:2, 31:2, 32:2, 34:2, 33:2, 35:2, 36 :2}
+  },
+  'C47': {
+    separate: {},
+    closer: {0:3, 10: 2, 11: 2, 13: 4, 14: 4, 15:2, 17:3, 18:2, 19:2, 20:2, 21:2, 22:3, 23:2, 24:2, 25:2, 26:2, 27:3, 28:2, 29:2,30:2, 31:3, 32:2, 33:2, 34:2, 35: 2}
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -987,6 +1033,8 @@ window.onFileSaved = async (path) => {
 // Check if Work Directory was previously selected.
 if ('showDirectoryPicker' in window) {
   (async () => {
+
+
     if (!window.workDirHandle) {
       try {
         const storedHandle = await idb_get('handles', 'workDir');
@@ -1181,7 +1229,12 @@ if ('showDirectoryPicker' in window) {
 
 
 
+  // Norm_Key_00 position per layout — the "blank assignable" slot.
+  // -1 means no Norm key (R47f_g).  Values from defines.h macros.
+  const NORM_KEY_POS = { 61:-1, 62:10, 63:11, 64:-1, 46:0, 45:0 };
+
   // Populate each key's primary / f-shift / g-shift labels from the
+
   // engine. Wrapped in refreshKeyLabels() so it can be re-run when USER
   // mode toggles (ASN-assigned functions need their text to update).
   window.refreshKeyLabels = function() {
@@ -1192,19 +1245,97 @@ if ('showDirectoryPicker' in window) {
       const lbl = r47.key_label(idx, 0) || (KEY_META[idx] && KEY_META[idx][1]) || '';
       if (target.textContent !== lbl) target.textContent = lbl;
     }
+    const is_c47 = r47.key_label(10, 0) === 'COS';
     for (const row of keysEl.querySelectorAll('.lbl')) {
       const idx = Number(row.dataset.idx);
+
       const f = r47.key_label(idx, 1) || '';
       const g = r47.key_label(idx, 2) || '';
+      
+      const C47_LABELS = {
+        0:  ['\u2192I', 'a b/c'],
+        1:  ['y\u02E3 #', ''],
+
+        2:  ['x\u00B2 .ms', ''],
+        3:  ['10\u02E3 .d', ''],
+        4:  ['e\u02E3 LBL', ''],
+        5:  ['\u03B1 GTO', ''],
+        6:  ['|x| \u2221', ''],
+        7:  ['% \u0394%', ''],
+        8:  ['\u03C0 \u221By', ''],
+        9:  ['ASIN i', ''],
+        10: ['ACOS \u2192R', ''],
+        11: ['ATAN \u2192P', ''],
+        27: ['\u25A0', '\u25A0\u25A0']
+      };
+
+      
+      let f_lbl = f;
+      let g_lbl = g;
+
+      
+      if (is_c47 && !f && !g) {
+        const labels = C47_LABELS[idx];
+        if (labels) {
+          f_lbl = labels[0] || '';
+          g_lbl = labels[1] || '';
+        }
+      }
+
       const fEl = row.querySelector('.shift-f');
       const gEl = row.querySelector('.shift-g');
-      if (fEl && fEl.textContent !== f) fEl.textContent = f;
+      if (fEl && fEl.textContent !== f_lbl) fEl.textContent = f_lbl;
+
       if (gEl) {
-        if (gEl.textContent !== g) gEl.textContent = g;
+
+        if (gEl.textContent !== g_lbl) gEl.textContent = g_lbl;
+
         gEl.classList.toggle('keys-access', g === 'KEYS');
       }
+
+      if (!is_c47 && idx === 34 && g_lbl === 'a b/c') {
+        if (gEl) gEl.style.whiteSpace = 'nowrap';
+      }
+
+      if (is_c47 && idx === 0 && g_lbl === 'a b/c') {
+        if (gEl) gEl.style.whiteSpace = 'nowrap';
+      }
+
+
+      // Apply offsets
+
+      const mode_key = is_c47 ? 'C47' : 'R47';
+      const mode_offsets = LABEL_OFFSETS[mode_key];
+      if (mode_offsets) {
+        let offset = 0;
+        let dir = 0;
+        if (mode_offsets.separate && mode_offsets.separate[idx] !== undefined) {
+          offset = mode_offsets.separate[idx];
+          dir = 1;
+        } else if (mode_offsets.closer && mode_offsets.closer[idx] !== undefined) {
+          offset = mode_offsets.closer[idx];
+          dir = -1;
+        }
+
+        if (offset !== 0) {
+          if (fEl) fEl.style.transform = `translateX(${-offset * dir}px)`;
+          if (gEl) gEl.style.transform = `translateX(${offset * dir}px)`;
+        } else {
+          if (fEl) fEl.style.transform = '';
+          if (gEl) gEl.style.transform = '';
+        }
+      }
+      
+      if (is_c47) {
+
+        row.style.display = '';
+      }
+
     }
+
+    reclassifyShiftKeys();
   }
+
   refreshKeyLabels();
 
   // ---------- Layout-switching support (g->KEYS) --------------------------
@@ -1213,11 +1344,9 @@ if ('showDirectoryPicker' in window) {
   // shift-key positions, nav styling, letter labels, tooltips,
   // keyboard shortcuts, and themes all update to match the new layout.
 
-  // Norm_Key_00 position per layout — the "blank assignable" slot.
-  // -1 means no Norm key (R47f_g).  Values from defines.h macros.
-  const NORM_KEY_POS = { 61:-1, 62:10, 63:11, 64:-1, 46:0, 45:0 };
 
   // Returns 'R47' | 'C47' | 'DM42' for the active calcModel. Used to
+
   // prefix .s47 state-file defaults so R47 and C47 saves don't overwrite
   // each other under the same filename (their file headers diverge —
   // R47_save_file_00 vs C47_save_file_00 — so a wrong-family load would
@@ -1274,7 +1403,9 @@ if ('showDirectoryPicker' in window) {
   // Also shows/hides the f/g shift-row labels above each button.
   function reclassifyShiftKeys() {
     const model = r47.calc_model();
+    console.log("[R47] reclassifyShiftKeys running, model:", model, "label(10):", r47.key_label(10, 0));
     // DM42 (model 45) has one physical gold shift key: fShifted = gold labels,
+
     // gShifted = C47-only extensions with no physical legend. CSS hides the
     // gShifted labels, except KEYS (which lets the user switch back to another
     // layout). C47 and other KEY_fg layouts have both layers physically labeled
@@ -1285,15 +1416,34 @@ if ('showDirectoryPicker' in window) {
       if (idx < 0) continue;
       btn.classList.remove('shift-f', 'shift-g', 'shift-fg',
                            'key-blank', 'key-assignable');
+      
       const st = r47.key_shift_type(idx);
-      switch (st) {
-        case 1: btn.classList.add('shift-f');  break;
-        case 2: btn.classList.add('shift-g');  break;
-        case 3: btn.classList.add('shift-fg'); break;
-        case 4:
-          btn.classList.add(idx === normPos ? 'key-assignable' : 'key-blank');
-          break;
+      const is_c47 = r47.key_label(10, 0) === 'COS';
+      
+      if (is_c47) {
+        // C47 specific styles: move shift colors to index 27
+        btn.classList.remove('key-f', 'key-g');
+        if (idx === 27) {
+          btn.classList.add('key-f');
+        }
+      } else {
+
+
+        if (idx === 10) btn.classList.add('key-f');
+        if (idx === 11) btn.classList.add('key-g');
+        
+        switch (st) {
+          case 1: btn.classList.add('shift-f');  break;
+          case 2: btn.classList.add('shift-g');  break;
+          case 3: btn.classList.add('shift-fg'); break;
+          case 4:
+            btn.classList.add(idx === normPos ? 'key-assignable' : 'key-blank');
+            break;
+        }
       }
+
+
+
       // Shift keys don't show f/g label rows above themselves.
       const row = keysEl.querySelector(`.key-shift-row[data-idx="${idx}"]`);
       if (row) row.style.display = (st >= 1 && st <= 3) ? 'none' : '';
@@ -1409,7 +1559,9 @@ if ('showDirectoryPicker' in window) {
   // Central handler for layout changes.  Called when the tick loop
   // detects that r47.calc_model() returned a new value.
   window.onModelChange = function(model) {
+    console.log("[R47] onModelChange running, model:", model);
     reclassifyShiftKeys();
+
     reclassifyNavKeys();
     refreshKeyLabels();
     rebuildLetterLabels();
