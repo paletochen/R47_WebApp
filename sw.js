@@ -38,26 +38,7 @@ const CORE = [
 // Explorer assets that are small + critical (pre-cached on install
 // so the Explorer loads fast offline).  Large WASM modules are
 // cache-on-fetch (see below) to keep the install step cheap.
-const EXPLORER_PRECACHE = [
-  '/r47_calculator_explorer/',
-  '/r47_calculator_explorer/index.html',
-  '/r47_calculator_explorer/static/calc.js',
-  '/r47_calculator_explorer/static/calc.css',
-  '/r47_calculator_explorer/static/docs.css',
-  '/r47_calculator_explorer/static/tabs.js',
-  '/r47_calculator_explorer/static/calcState.js',
-  '/r47_calculator_explorer/static/filesTab.js',
-  '/r47_calculator_explorer/static/programTab.js',
-  '/r47_calculator_explorer/static/docsTab.js',
-  '/r47_calculator_explorer/static/rejigClient.js',
-  '/r47_calculator_explorer/static/rejig-decimal.js',
-  '/r47_calculator_explorer/data/keys.json',
-  '/r47_calculator_explorer/data/menus.json',
-  '/r47_calculator_explorer/data/items.json',
-  '/r47_calculator_explorer/data/item_descriptions.json',
-  '/r47_calculator_explorer/data/system_flags.json',
-  '/r47_calculator_explorer/data/tutorial.json',
-];
+const EXPLORER_PRECACHE = [];
 
 self.addEventListener('install', (ev) => {
   ev.waitUntil((async () => {
@@ -65,11 +46,11 @@ self.addEventListener('install', (ev) => {
     const reload = (list) => list.map(u => new Request(u, { cache: 'reload' }));
     await Promise.all([
       cache.addAll(reload(CORE)).catch(e => console.warn('CORE precache miss:', e)),
-      cache.addAll(reload(EXPLORER_PRECACHE)).catch(e => console.warn('Explorer precache miss:', e)),
     ]);
   })());
   self.skipWaiting();
 });
+
 
 self.addEventListener('activate', (ev) => {
   ev.waitUntil((async () => {
