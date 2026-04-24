@@ -1385,20 +1385,23 @@ html[data-switching="1"] #device { pointer-events: none; }
 /* Snackbar styles */
 #snackbar {
   position: fixed;
-  bottom: 20px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%) translateY(200px);
-  background-color: #333;
-  color: #fff;
-  padding: 12px 24px;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  background-color: #211f1d; /* Dark surface in dark/light */
+  color: #f5f0e8;
+  padding: 14px 24px;
+  border-radius: 16px; /* Material 3 style */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   z-index: 1000;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: var(--font-sans);
+  min-width: 344px;
+  max-width: 568px;
 }
 
 #snackbar.show {
@@ -1408,19 +1411,26 @@ html[data-switching="1"] #device { pointer-events: none; }
 @media (max-width: 520px) {
   #snackbar {
     bottom: 80px;
-    width: 90%;
-    max-width: 400px;
+    width: 92%;
+    min-width: 0;
   }
 }
 
 #snackbar-action-btn {
-  background-color: var(--f-gold);
-  color: #000;
+  background-color: transparent;
+  color: var(--f-gold); /* Calculator gold */
   border: none;
-  padding: 6px 12px;
-  border-radius: 2px;
+  padding: 8px 12px;
+  border-radius: 20px; /* Pill shape */
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 12px;
+}
+
+#snackbar-action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Settings Modal styles */
@@ -1429,52 +1439,85 @@ html[data-switching="1"] #device { pointer-events: none; }
   background: var(--popup-panel);
   color: var(--popup-text);
   border: 1px solid var(--popup-border);
-  border-radius: 8px;
+  border-radius: 28px; /* Material 3 style for dialogs */
   width: min(90vw, 400px);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
   transform: translateZ(0);
   will-change: transform;
+  padding: 8px;
 }
 
 .settings-body {
-  padding: 14px;
+  padding: 16px 24px 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .settings-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  min-height: 48px;
 }
 
 .settings-row label {
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--popup-text);
+  font-weight: 500;
 }
 
+/* Material switch simulation */
 .settings-row input[type="checkbox"] {
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  background-color: #555;
+  border-radius: 12px;
+  position: relative;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+.settings-row input[type="checkbox"]:checked {
+  background-color: var(--g-blue);
+}
+.settings-row input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.settings-row input[type="checkbox"]:checked::before {
+  transform: translateX(20px);
 }
 
+/* Material slider simulation */
 .settings-row input[type="range"] {
   flex: 1;
-  max-width: 150px;
+  max-width: 160px;
+  accent-color: var(--f-gold);
 }
 
+
 .settings-body h3 {
-  margin: 10px 0 5px;
-  font-size: 13px;
+  margin: 16px 0 8px;
+  font-size: 14px;
   font-family: var(--font-sans);
   color: var(--popup-accent);
-  border-bottom: 1px solid var(--popup-border);
-  padding-bottom: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
+
 
 .work-dir-controls {
   display: flex;
