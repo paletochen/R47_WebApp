@@ -6,7 +6,8 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.28';
+const WEB_VERSION = '3.29';
+
 
 
 
@@ -930,6 +931,20 @@ async function boot() {
   try { mod.FS.mkdir('/persist/LIBRARY'); } catch (e) {}
   try { mod.FS.mkdir('/persist/uploads'); } catch (e) {}
 
+  // iOS storage bridge: load from localStorage if IDBFS fails or is unsupported
+  if (!('showSaveFilePicker' in window)) {
+    const data = localStorage.getItem('backupR47.cfg');
+    if (data) {
+      try {
+        mod.FS.writeFile('/persist/backupR47.cfg', data);
+        dbg('iOS: Restored backupR47.cfg from localStorage');
+      } catch (e) {
+        dbg('iOS: Failed to write restored backupR47.cfg: ' + e);
+      }
+    }
+  }
+
+
 function showSnackbar(message, actionText, actionCallback) {
   const snackbar = document.getElementById('snackbar');
   if (!snackbar) return;
@@ -946,6 +961,24 @@ function showSnackbar(message, actionText, actionCallback) {
   snackbar.classList.add('show');
 }
 window.showSnackbar = showSnackbar;
+
+// iOS storage bridge: save to localStorage on file close
+const origOnFileSaved = window.onFileSaved;
+window.onFileSaved = async (path) => {
+  if (origOnFileSaved) await origOnFileSaved(path);
+  if (path.endsWith('backupR47.cfg')) {
+    if (!('showSaveFilePicker' in window)) {
+      try {
+        const data = window.Module.FS.readFile(path, { encoding: 'utf8' });
+        localStorage.setItem('backupR47.cfg', data);
+        dbg('iOS: Saved backupR47.cfg to localStorage');
+      } catch (e) {
+        dbg('iOS: Failed to read backupR47.cfg for save: ' + e);
+      }
+    }
+  }
+};
+
 
 // Check if Work Directory was previously selected.
 if ('showDirectoryPicker' in window) {
