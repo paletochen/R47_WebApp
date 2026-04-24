@@ -282,8 +282,10 @@
       }
 
       let filename = 'c47-web-' + target + '-debug.js';
-      if (target === 'r47') filename = 'r47.js';
+      const targetIsR47 = (target === 'r47' || (parseInt(target) >= 61 && parseInt(target) <= 64));
+      if (targetIsR47) filename = 'r47.js';
       inject('wasm/' + filename, function() {
+
         // Selected firmware binary failed to load — user-visible recovery.
         try { localStorage.removeItem('r47-target'); } catch (_) {}
         document.body.innerHTML =

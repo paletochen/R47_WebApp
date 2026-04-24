@@ -6,7 +6,21 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.75';
+const WEB_VERSION = '3.89';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -33,7 +47,12 @@ const LABEL_OFFSETS = {
   'C47': {
     separate: {},
     closer: {0:3, 10: 2, 11: 2, 13: 4, 14: 4, 15:2, 17:3, 18:2, 19:2, 20:2, 21:2, 22:3, 23:2, 24:2, 25:2, 26:2, 27:3, 28:2, 29:2,30:2, 31:3, 32:2, 33:2, 34:2, 35: 2}
+  },
+  'DM42': {
+    separate: {},
+    closer: {}
   }
+
 };
 
 
@@ -845,10 +864,27 @@ async function boot() {
     document.documentElement.removeAttribute('data-switching');
   }
 
+  let inFamilySwitch = false;
+
   window.r47RequestFamilyReload = async function(targetModel) {
+    if (inFamilySwitch) return;
+
     // USER_R47f_g..USER_R47fg_g = 61..64; USER_C47 = 46; USER_DM42 = 45.
     const targetIsR47 = (targetModel >= 61 && targetModel <= 64);
+    const currentModel = r47.calc_model();
+    const currentIsR47 = (currentModel >= 61 && currentModel <= 64);
+
+    if (currentIsR47 && targetIsR47) {
+      console.log(`[R47] In-family switch from ${currentModel} to ${targetModel}`);
+      inFamilySwitch = true;
+      r47.set_calc_model(targetModel);
+      inFamilySwitch = false;
+      return;
+    }
+
+
     const displayName = targetIsR47
+
         ? 'R47'
         : (targetModel === 45 ? 'DM42' : 'C47');
 
@@ -1227,6 +1263,16 @@ if ('showDirectoryPicker' in window) {
   await window.idbfsMountedPromise;
   r47.init();
 
+  try {
+    const t = JSON.parse(localStorage.getItem('r47-target') || '{}');
+    if (t && t.initialLayout) {
+      console.log(`[R47] Applying initial layout from target: ${t.initialLayout}`);
+      r47.set_calc_model(t.initialLayout);
+      localStorage.removeItem('r47-target');
+    }
+  } catch (_) {}
+
+
   // dbg('screen ptr=' + r47.screen_ptr() + ' stride=' + r47.screen_stride());
 
 
@@ -1246,6 +1292,40 @@ if ('showDirectoryPicker' in window) {
       const target = span || btn;
       const lbl = r47.key_label(idx, 0) || (KEY_META[idx] && KEY_META[idx][1]) || '';
       if (target.textContent !== lbl) target.textContent = lbl;
+
+      // Specific R47 sub-mode fixes based on verified mapping
+      const model = r47.calc_model();
+      const is_r47 = (model >= 61 && model <= 64);
+
+      if (is_r47) {
+        if (model === 63) {
+          // F2: USER_R47fg_bk -> Left f/g, Right blank (BOX)
+          if (idx === 10) {
+            btn.classList.add('key-f');
+            btn.classList.remove('key-blank', 'key-g', 'shift-f', 'shift-g', 'shift-fg');
+            target.textContent = 'f/g'; // Force label!
+          }
+          if (idx === 11) {
+            btn.classList.remove('key-f', 'key-g', 'shift-f', 'shift-g', 'shift-fg', 'key-blank');
+            target.textContent = '';
+          }
+        }
+        if (model === 62) {
+          // F4: USER_R47bk_fg -> Left blank (BOX), Right f/g
+          if (idx === 10) {
+            btn.classList.remove('key-f', 'key-g', 'shift-f', 'shift-g', 'shift-fg', 'key-blank');
+            target.textContent = '';
+          }
+          if (idx === 11) {
+            btn.classList.add('key-f'); // yellow
+            btn.classList.remove('key-blank', 'key-g', 'shift-f', 'shift-g', 'shift-fg');
+            target.textContent = 'f/g'; // Force label!
+          }
+        }
+      }
+
+
+
     }
     const is_c47 = r47.key_label(10, 0) === 'COS';
     for (const row of keysEl.querySelectorAll('.lbl')) {
@@ -1431,9 +1511,27 @@ if ('showDirectoryPicker' in window) {
       } else {
 
 
-        if (idx === 10) btn.classList.add('key-f');
-        if (idx === 11) btn.classList.add('key-g');
-        
+        const lbl10 = r47.key_label(10, 0) || '';
+        const lbl11 = r47.key_label(11, 0) || '';
+
+        if (idx === 10) {
+          if (lbl10 === 'f/g' || lbl10 === 'f') {
+            btn.classList.add('key-f');
+          } else if (lbl10 === 'g') {
+            btn.classList.add('key-g');
+          }
+        }
+
+        if (idx === 11) {
+          if (lbl11 === 'f/g') {
+            btn.classList.add('key-f'); // 'f/g' is yellow
+          } else if (lbl11 === 'g') {
+            btn.classList.add('key-g');
+          }
+        }
+
+
+
         switch (st) {
           case 1: btn.classList.add('shift-f');  break;
           case 2: btn.classList.add('shift-g');  break;
@@ -1442,6 +1540,7 @@ if ('showDirectoryPicker' in window) {
             btn.classList.add(idx === normPos ? 'key-assignable' : 'key-blank');
             break;
         }
+
       }
 
 
