@@ -6,7 +6,8 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.29';
+const WEB_VERSION = '3.30';
+
 
 
 
@@ -1033,9 +1034,26 @@ if ('showDirectoryPicker' in window) {
       }
     }
   })();
+} else {
+  // Fallback for non-picker browsers (like iOS) using OPFS
+  if ('storage' in navigator && 'getDirectory' in navigator.storage) {
+    (async () => {
+      try {
+        const handle = await navigator.storage.getDirectory();
+        window.workDirHandle = handle;
+        dbg("iOS: OPFS root handle acquired as working directory.");
+        await handleDirectorySelection(handle);
+      } catch (e) {
+        dbg("iOS: Failed to get OPFS root: " + e.message);
+      }
+    })();
+  } else {
+    dbg("iOS: OPFS not supported either. Falling back to manual downloads.");
+  }
 }
 
   // main() is a no-op in the web entry; all real boot work is in r47_init.
+
   // (We set noInitialRun so the engine can't side-effect before IDBFS
   // is mounted.)
 
