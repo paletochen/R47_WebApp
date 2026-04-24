@@ -6,7 +6,8 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.89';
+const WEB_VERSION = '3.90';
+
 
 
 
@@ -878,9 +879,12 @@ async function boot() {
       console.log(`[R47] In-family switch from ${currentModel} to ${targetModel}`);
       inFamilySwitch = true;
       r47.set_calc_model(targetModel);
+      console.log(`[R47] Invoking window.refreshKeyLabels() after switch`);
+      if (window.refreshKeyLabels) window.refreshKeyLabels();
       inFamilySwitch = false;
       return;
     }
+
 
 
     const displayName = targetIsR47
