@@ -65,33 +65,11 @@ function initCalculator() {
     Module._init_lcd_buffers();
     
     Module._web_init();
-    // startRenderLoop(width, height);
+
 }
 
 
-function startRenderLoop(width, height) {
-    // Call tick on a high-frequency interval (every 5ms) to drive core timers
-    setInterval(() => {
-        if (Module && Module._tick) {
-            Module._tick();
-        }
-    }, 5);
-    
-    // Render loop synced with display refresh
-    function render() {
-        if (Module && Module._isScreenDirty && Module._isScreenDirty()) {
-            const ptr = Module._getScreenDataPtr();
-            const screenBuffer = new Uint8ClampedArray(Module.HEAPU8.buffer, ptr, width * height * 4);
-            const imageData = new ImageData(screenBuffer, width, height);
-            ctx.putImageData(imageData, 0, 0);
-        }
-        updateAlphaLabels();
-        requestAnimationFrame(render);
-    }
-    
-    requestAnimationFrame(render);
-    console.log("Render loop started");
-}
+
 
 // Helper to send key to calculator
 function sendKey(keyId, isFn, isRelease) {
@@ -971,122 +949,9 @@ window.r47RequestFile = async (kind) => {
 
 
 
-function updateAlphaLabels() {
 
-    const isAlpha = false; // Mocked as false because isAlphaMode is not exported
 
-    const buttons = document.querySelectorAll('.btn');
-    
-    const alphaGoldMapping = {
-        '00': 'a', '01': 'b', '02': 'c', '03': 'd', '04': 'e', '05': 'f',
-        '06': 'g', '07': 'h', '08': 'i', '09': 'j',
-        '12': 'X.EDIT', '13': 'k', '14': 'l', '15': 'm', '16': 'CLA',
-        '17': 'ω', '18': 'n', '19': 'o', '20': 'p', '21': 'q',
-        '22': 'CASE', '23': 'r', '24': 's', '25': 't', '26': 'u',
-        '27': 'CASE', '28': 'v', '29': 'w', '30': 'x', '31': 'y',
-        '32': '⏻', '33': 'z', '34': ';', '35': ':', '36': 'CAT'
-    };
-    
-    const alphaBlueMapping = {
-        '00': 'i', '01': '√', '02': '!', '03': '^', '04': 'e', '05': '#',
-        '06': '|', '07': 'Δ', '08': 'π', '09': 'j',
-        '12': '↵', '13': '⇄', '14': '±', '15': 'E', '16': ' ',
-        '17': 'α', '18': '7', '19': '8', '20': '9', '21': '÷',
-        '22': '↑', '23': '4', '24': '5', '25': '6', '26': '×',
-        '27': '↓', '28': '1', '29': '2', '30': '3', '31': '-',
-        '32': 'INFO', '33': '0', '34': '.', '35': '/', '36': '+'
-    };
 
-    buttons.forEach(btn => {
-        const keyId = btn.getAttribute('data-key');
-        if (!keyId) return;
-        
-        const container = btn.parentElement;
-        const alphaSpan = container.querySelector('.alpha');
-        const goldSpan = container.querySelector('.gold');
-        const blueSpan = container.querySelector('.blue');
-        
-        if (isAlpha) {
-            if (alphaSpan) {
-                btn.innerText = alphaSpan.innerText;
-                alphaSpan.style.display = 'none'; // Hide small white label
-            }
-            
-            // Read labels from C core as pointers
-            const keyCode = parseInt(keyId, 10);
-            const goldPtr = Module.ccall('getKeyLabelNative', 'number', ['number', 'number'], [keyCode, 1]);
-            const bluePtr = Module.ccall('getKeyLabelNative', 'number', ['number', 'number'], [keyCode, 2]);
-            
-            let goldLbl = "";
-            if (goldPtr) {
-                let i = 0;
-                while (Module.HEAPU8[goldPtr + i] !== 0) {
-                    goldLbl += String.fromCharCode(Module.HEAPU8[goldPtr + i]);
-                    i++;
-                }
-            }
-            
-            let blueLbl = "";
-            if (bluePtr) {
-                let i = 0;
-                while (Module.HEAPU8[bluePtr + i] !== 0) {
-                    blueLbl += String.fromCharCode(Module.HEAPU8[bluePtr + i]);
-                    i++;
-                }
-            }
-            
-            // Fallback to hardcoded mapping if C returns empty
-            if (!goldLbl && alphaGoldMapping[keyId]) {
-                goldLbl = alphaGoldMapping[keyId];
-            }
-            if (!blueLbl && alphaBlueMapping[keyId]) {
-                blueLbl = alphaBlueMapping[keyId];
-            }
-            
-            if (goldSpan) {
-                if (goldLbl) {
-                    goldSpan.innerText = goldLbl;
-                } else {
-                    const origGold = goldSpan.getAttribute('data-orig-label');
-                    if (origGold) goldSpan.innerText = origGold;
-                }
-            }
-            if (blueSpan) {
-                if (blueLbl) {
-                    blueSpan.innerText = blueLbl;
-                } else {
-                    const origBlue = blueSpan.getAttribute('data-orig-label');
-                    if (origBlue) blueSpan.innerText = origBlue;
-                }
-            }
-        } else {
-            const origLabel = btn.getAttribute('data-orig-label');
-            if (origLabel) {
-                btn.innerText = origLabel;
-            }
-            if (alphaSpan) {
-                alphaSpan.style.display = 'inline'; // Show small white label
-            }
-            
-            if (goldSpan) {
-                const origGold = goldSpan.getAttribute('data-orig-label');
-                if (origGold) goldSpan.innerText = origGold;
-            }
-            if (blueSpan) {
-                const origBlue = blueSpan.getAttribute('data-orig-label');
-                if (origBlue) blueSpan.innerText = origBlue;
-            }
-        }
-    });
-}
-
-// Auto-save state every 5 seconds
-// setInterval(() => {
-//     if (Module && Module.ccall) {
-//         // console.log("Auto-saving state...");
-//         Module.ccall('saveCalc', null, []);
-//     }
-// }, 5000);
 
 function handleLongPress(keyId) {
     if (keyId === '10') { // f key
