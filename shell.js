@@ -509,8 +509,43 @@ const hex2rgb = (s) => {
   const n = parseInt(s.replace('#',''), 16);
   return [(n>>16)&0xff, (n>>8)&0xff, n&0xff];
 };
+const THEMES = [
+  // id,             name,            kind,   swatches (for picker tiles), lcdBg, lcdFg
+  ['c47',            'C47',           'dark', ['#1A1A1A','#222222','#E5AE5A','#7EB6BA'], '#C8D8A0','#1C3014'],
+  ['hp-classic',     'HP Classic',    'dark', ['#2B2A29','#212121','#E5AE5A','#7EB6BA'], '#e0e0e0','#303030'],
+  ['hp-clean',       'HP Clean',      'dark', ['#2B2A29','#2B2A29','#E5AE5A','#7EB6BA'], '#2A1B08','#FFBF4A'],
+  ['hp-10b-clean',   'HP 10B Clean',  'dark', ['#182331','#182331','#6499D3','#5A8FCA'], '#061936','#91C8FF'],
+  ['nord-dark',      'Nord Dark',     'dark', ['#2E3440','#3B4252','#EBCB8B','#88C0D0'], '#2B3340','#ECEFF4'],
+  ['dracula',        'Nightfall',     'dark', ['#282A36','#44475A','#FFB86C','#8BE9FD'], '#1C2535','#F5F8FF'],
+  ['monokai',        'Monokai',       'dark', ['#272822','#3E3D32','#FD971F','#66D9EF'], '#1F201B','#F8F8F2'],
+  ['solarized-dark', 'Solarized Dark','dark', ['#002B36','#073642','#B58900','#2AA198'], '#00212B','#EEE8D5'],
+  ['tokyo-night',    'Tokyo Night',   'dark', ['#1A1B26','#24283B','#E0AF68','#7DCFFF'], '#1F2335','#C0CAF5'],
+  ['catppuccin-mocha','Catppuccin Mocha','dark',['#1E1E2E','#313244','#F9E2AF','#89B4FA'], '#1A2434','#D8E7FF'],
+  ['twilight',       'Twilight',      'dark', ['#2A2826','#5A5E68','#F0B284','#E8A2A2'], '#EDE4CC','#261C10'],
+  ['ti-89-classic',  'TI-89 Classic', 'dark', ['#2C3442','#6B87A6','#E1C54D','#315D38'], '#C6D7CF','#20303F'],
+  ['hp-48g',         'HP 48G',        'dark', ['#374541','#E6EBE1','#A486C9','#4D9C7A'], '#C9D7A7','#183022'],
+  ['irixium',        'Irixium',       'light',['#6F93A6','#C5BBB2','#C98572','#3E88A8'], '#C8D9E7','#25344F'],
+  ['cde',            'CDE',           'light',['#3F8F87','#B7D3DD','#F0A45D','#78AFC8'], '#B8D6D0','#173946'],
+  ['platinum',       'Platinum',      'light',['#C8CDD5','#45505D','#5F97EC','#5CA56F'], '#D6DCE4','#2E4053'],
+  ['hp-10b',         'HP 10B',        'light',['#C8CED6','#1A1D22','#3C78BC','#22374F'], '#AFC7DB','#0D2032'],
+  ['hp-silver',      'HP Silver',     'light',['#B8AE9C','#E8E1D0','#B57600','#0F66AA'], '#C9D5A9','#0F1A20'],
+  ['blue-steel',     'Blue Steel',    'light',['#A8B5C2','#E1E7EE','#B77A14','#236EA8'], '#CBD8E6','#13253C'],
+  ['blue-steel-clean','Blue Steel Clean','light',['#A8B5C2','#A8B5C2','#6A3A00','#004878'], '#102836','#86E8FF'],
+  ['rose-quartz',    'Rose Quartz',   'light',['#D5C0C3','#F0E5E6','#B97C2F','#5A82A3'], '#E5CDD2','#4A2E35'],
+  ['solarized-light','Solarized Light','light',['#FDF6E3','#EEE8D5','#B58900','#2AA198'], '#FDF6E3','#002B36'],
+  ['nord-light',     'Nord Light',    'light',['#ECEFF4','#E5E9F0','#D08770','#5E81AC'], '#ECEFF4','#2E3440'],
+  ['gruvbox-light',  'Gruvbox Light', 'light',['#FBF1C7','#EBDBB2','#B57614','#076678'], '#FBF1C7','#3C3836'],
+  ['github-light',   'GitHub Light',  'light',['#F6F8FA','#FFFFFF','#DAFBE1','#DDF4FF'], '#FFFFFF','#24292F'],
+];
+const DEFAULT_THEME_ID = 'hp-classic';
+const LEGACY_THEME_KEY = 'r47-theme';
+const KEYS_THEME_KEY   = 'r47-keys-theme';
+const LCD_THEME_KEY    = 'r47-lcd-theme';
 const LCD_SMOOTH_KEY   = 'r47-lcd-smooth';
 const LAYOUT_KEY       = 'r47-layout';
+const THEME_ALIASES = {
+  'hpb-clean': 'hp-10b-clean',
+};
 
 // When embedded in the docs page (iframe src="/?docs=1") we default to
 // Blue Steel keys + HP Classic LCD, and intentionally do NOT persist
@@ -539,9 +574,21 @@ if (IS_DOCS) {
   }, { passive: false });
 }
 
+function getTheme(id) {
+  const canonical = THEME_ALIASES[id] || id;
+  return THEMES.find((t) => t[0] === canonical) || THEMES[0];
+}
 
-
-
+function getStoredTheme(key) {
+  if (IS_DOCS) {
+    return key === LCD_THEME_KEY ? DOCS_DEFAULT_LCD_THEME : DOCS_DEFAULT_KEYS_THEME;
+  }
+  try {
+    return localStorage.getItem(key) || localStorage.getItem(LEGACY_THEME_KEY) || DEFAULT_THEME_ID;
+  } catch (_) {
+    return DEFAULT_THEME_ID;
+  }
+}
 
 function getStoredLcdSmooth() {
   try {
@@ -660,7 +707,27 @@ window.getSubfolderHandle = async function(subfolderName) {
   }
 }
 
+function applyKeysTheme(id) {
+  const t = getTheme(id);
+  currentKeysTheme = t[0];
+  document.documentElement.dataset.keysTheme = t[0];
+  setBrowserThemeColor(t[3][0]);
+  if (!IS_DOCS) { try { localStorage.setItem(KEYS_THEME_KEY, t[0]); } catch (_) {} }
+}
 
+function applyLcdTheme(id) {
+  const t = getTheme(id);
+  currentLcdTheme = t[0];
+  document.documentElement.dataset.lcdTheme = t[0];
+  document.documentElement.style.setProperty('--lcd-bg', t[4]);
+  LCD_REMAP.bg = hex2rgb(t[4]);
+  LCD_REMAP.fg = hex2rgb(t[5]);
+  if (!IS_DOCS) { try { localStorage.setItem(LCD_THEME_KEY, t[0]); } catch (_) {} }
+}
+
+// Apply saved themes as early as possible (before first paint).
+try { applyKeysTheme(getStoredTheme(KEYS_THEME_KEY)); } catch (_) {}
+try { applyLcdTheme(getStoredTheme(LCD_THEME_KEY)); } catch (_) {}
 
 let r47 = null;
 
@@ -1432,7 +1499,44 @@ if ('showDirectoryPicker' in window) {
   };
 
 
+  // Layout → default [keysTheme, lcdTheme] pairing.
+  // All four R47 shift variants get explicit entries so applyPairedTheme
+  // doesn't silently fall back to LAYOUT_THEMES[61] — that implicit
+  // fallback was functional but obscured per-variant theming intent.
+  const LAYOUT_THEMES = {
+    61: ['hp-classic',  'hp-classic'],       // R47f_g    (USER_R47f_g)
+    62: ['hp-classic',  'hp-classic'],       // R47bk_fg  (USER_R47bk_fg)
+    63: ['hp-classic',  'hp-classic'],       // R47fg_bk  (USER_R47fg_bk)
+    64: ['hp-classic',  'hp-classic'],       // R47fg_g   (USER_R47fg_g)
+    46: ['c47',         'c47'],              // C47       (USER_C47)
+    45: ['hp-clean',    'twilight'],          // DM42      (USER_DM42)
+  };
+  // Docs-mode (explorer iframe) defaults — KEY models use github-light LCD
+  // for readability; C47/DM42 keep their natural dark/light pairing.
+  const DOCS_LAYOUT_THEMES = {
+    61: ['blue-steel',  'github-light'],
+    62: ['blue-steel',  'github-light'],
+    63: ['blue-steel',  'github-light'],
+    64: ['blue-steel',  'github-light'],
+    46: ['c47',         'github-light'],
+    45: ['hp-clean',    'github-light'],
+  };
+  const THEME_AUTO_KEY = 'r47-theme-auto-switch';
 
+  function getThemeAutoSwitch() {
+    try { return localStorage.getItem(THEME_AUTO_KEY) !== '0'; }
+    catch (_) { return true; }
+  }
+
+  function getLayoutThemeOverride(model, domain) {
+    try { return localStorage.getItem(`r47-${domain}-theme-${model}`); }
+    catch (_) { return null; }
+  }
+
+  function saveLayoutThemeOverride(model, domain, themeId) {
+    try { localStorage.setItem(`r47-${domain}-theme-${model}`, themeId); }
+    catch (_) {}
+  }
 
   // Reclassify which buttons are shift keys (shift-f, shift-g, shift-fg,
   // key-blank, key-assignable) based on the engine's current layout.
@@ -1594,7 +1698,22 @@ if ('showDirectoryPicker' in window) {
 
   // Apply the paired theme for a layout (unless user has overridden or
   // auto-switch is disabled).
+  function applyPairedTheme(model) {
+    if (!getThemeAutoSwitch()) return;
+    const defaults = LAYOUT_THEMES[model] || LAYOUT_THEMES[61];
+    const keysOvr = getLayoutThemeOverride(model, 'keys');
+    const lcdOvr  = getLayoutThemeOverride(model, 'lcd');
+    applyKeysTheme(keysOvr || defaults[0]);
+    applyLcdTheme(lcdOvr  || defaults[1]);
+  }
 
+  function applyDocsPairedTheme(model) {
+    const defaults = DOCS_LAYOUT_THEMES[model] || DOCS_LAYOUT_THEMES[61];
+    const keysOvr = getLayoutThemeOverride(model, 'keys');
+    const lcdOvr  = getLayoutThemeOverride(model, 'lcd');
+    applyKeysTheme(keysOvr || defaults[0]);
+    applyLcdTheme(lcdOvr  || defaults[1]);
+  }
 
   // Central handler for layout changes.  Called when the tick loop
   // detects that r47.calc_model() returned a new value.
@@ -1607,7 +1726,10 @@ if ('showDirectoryPicker' in window) {
     rebuildLetterLabels();
     rebuildTooltips();
     rebuildKeyboardBindings();
-    if (!IS_DOCS) {
+    if (IS_DOCS) {
+      applyDocsPairedTheme(model);
+    } else {
+      applyPairedTheme(model);
       try { localStorage.setItem(LAYOUT_KEY, String(model)); } catch (_) {}
     }
   }
@@ -2054,7 +2176,53 @@ if ('showDirectoryPicker' in window) {
     hapticEnabled = false;
     if (hapticInput) hapticInput.closest('label')?.setAttribute('hidden', '');
   }
-
+  function buildThemeGrid(target) {
+    const current = target === 'lcd' ? currentLcdTheme : currentKeysTheme;
+    themeTitle.textContent = target === 'lcd' ? 'Choose an LCD theme' : 'Choose a keys theme';
+    themeControls.hidden = target !== 'lcd';
+    themeControlsKeys.hidden = target !== 'keys' || !hapticSupported;
+    lcdSmoothInput.checked = currentLcdSmooth;
+    themeGrid.innerHTML = '';
+    for (const t of THEMES) {
+      const [id, name, kind, sw] = t;
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'theme-tile' + (id === current ? ' selected' : '');
+      tile.dataset.id = id;
+      tile.innerHTML =
+        '<span class="theme-swatch">' +
+          '<span style="background:' + sw[0] + '"></span>' +
+          '<span style="background:' + sw[1] + '"></span>' +
+          '<span style="background:' + sw[2] + '"></span>' +
+          '<span style="background:' + sw[3] + '"></span>' +
+        '</span>' +
+        '<span><span class="theme-name">' + name + '</span>' +
+        '<br><span class="theme-kind">' + kind + '</span></span>';
+      tile.addEventListener('click', () => {
+        if (target === 'lcd') applyLcdTheme(id);
+        else applyKeysTheme(id);
+        // Save per-layout override so switching back to this layout
+        // restores the user's manual choice.
+        if (getThemeAutoSwitch()) {
+          const model = r47.calc_model();
+          saveLayoutThemeOverride(model, target, id);
+        }
+        // Update selected indicator without closing — let the user
+        // preview themes live and close when done.
+        themeGrid.querySelector('.theme-tile.selected')
+                 ?.classList.remove('selected');
+        tile.classList.add('selected');
+      });
+      themeGrid.appendChild(tile);
+    }
+  }
+  // Removed listeners for removed toolbar buttons to prevent crashes.
+  document.getElementById('theme-close').addEventListener('click', () => {
+    themeModal.hidden = true;
+  });
+  themeModal.querySelector('.theme-backdrop').addEventListener('click', () => {
+    themeModal.hidden = true;
+  });
   document.getElementById('printer-close').addEventListener('click', () => {
     printerEl.hidden = true;
   });
