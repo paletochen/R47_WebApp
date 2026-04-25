@@ -6,7 +6,26 @@
 
 // Single source of truth for the web release. assemble-web.sh stamps
 // this into dist/sw.js (VERSION) and dist/index.html (softwareVersion).
-const WEB_VERSION = '3.92';
+const WEB_VERSION = '4.11v4';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -430,19 +449,28 @@ function fitScale() {
   let fillScreen = false;
   try { fillScreen = localStorage.getItem('r47-fill-screen') === '1'; } catch (_) {}
   const phoneFill = phoneLikePortrait && fillScreen;
+  
+  // In safe mode, force a gap at the top to clear camera, even if height limited.
+  const forcedTopGap = 50;
   const safeTop    = phoneFill ? 0 : (phoneLikePortrait ? Math.max(0, rawSafeTop - 5 * (vw / W)) : rawSafeTop);
   const safeBottom = phoneFill ? 0 : getSafeAreaInset('bottom');
-  const safeH = Math.max(1, vh - safeTop - safeBottom);
+  
+  const baseSafeH = Math.max(1, vh - safeTop - safeBottom);
+  const safeH = phoneFill ? baseSafeH : Math.max(1, baseSafeH - forcedTopGap);
+  const topMargin = phoneFill ? 0 : forcedTopGap;
 
   const fitW = (phoneLikePortrait ? vw : safeW) / W;
   const fitH = safeH / H;
   const s = Math.min(fitW, fitH);
 
   // Fill screen: center vertically in the full viewport.
-  // Safe mode: pin the top edge at safeTop.
+  // Safe mode: pin to the bottom of the safe area to leave gap at top.
   const centerX = phoneLikePortrait ? (vw / 2) : (safeLeft + safeW / 2);
-  const topEdge = phoneFill ? Math.max(0, (vh - H * s) / 2 + 12) : safeTop;
+  const topEdge = phoneFill ? Math.max(0, (vh - H * s) / 2 + 12) : (safeTop + topMargin + (safeH - H * s));
   const centerY = topEdge + (H * s) / 2;
+
+
+
 
   document.documentElement.style.setProperty('--device-scale', s);
   document.documentElement.style.setProperty('--device-left', centerX + 'px');
@@ -1030,6 +1058,8 @@ async function boot() {
   try { mod.FS.mkdir('/persist/PROGRAMS'); } catch (e) {}
   try { mod.FS.mkdir('/persist/LIBRARY'); } catch (e) {}
   try { mod.FS.mkdir('/persist/uploads'); } catch (e) {}
+  try { mod.FS.mkdir('/persist/SCREENS'); } catch (e) {}
+
 
   // iOS storage bridge: load from localStorage if IDBFS fails or is unsupported
   if (!('showSaveFilePicker' in window)) {
@@ -1043,6 +1073,22 @@ async function boot() {
       }
     }
   }
+
+  // iOS specific UI adjustments
+  if (!('showSaveFilePicker' in window)) {
+    const workDirRow = document.getElementById('settings-work-dir-row');
+    const iosStorageRow = document.getElementById('settings-ios-storage-row');
+    if (workDirRow) workDirRow.hidden = true;
+    if (iosStorageRow) iosStorageRow.hidden = false;
+    
+    const openBtn = document.getElementById('fb-open-btn');
+    if (openBtn) {
+      openBtn.onclick = () => {
+        if (window.FileBrowser) window.FileBrowser.show();
+      };
+    }
+  }
+
 
 
 function showSnackbar(message, actionText, actionCallback) {
@@ -2979,19 +3025,21 @@ if ('serviceWorker' in navigator) {
 // unless the user is already running as a PWA.
 (function promoteInstall() {
   const ua = navigator.userAgent;
-  const isIOS = /iPhone|iPad|iPod/.test(ua) && !/CriOS|FxiOS/.test(ua);
+  const isIOSPlatform = /iPhone|iPad|iPod/.test(ua);
+  const isIOS = isIOSPlatform && !/CriOS|FxiOS/.test(ua);
   const isAndroid = /Android/.test(ua);
   const isStandalone =
     window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true;     // iOS legacy flag
 
   // Add platform classes so CSS shows the right hint text.
-  if (isIOS)     document.documentElement.classList.add('is-ios');
-  if (isAndroid) document.documentElement.classList.add('is-android');
+  if (isIOSPlatform) document.documentElement.classList.add('is-ios');
+  if (isAndroid)     document.documentElement.classList.add('is-android');
 
   if (isStandalone) return;                                    // already full-screen
   if (localStorage.getItem('r47.installDismissed') === '1') return;
   if (!isIOS && !isAndroid) return;                            // skip desktop
+
 
   const banner = document.getElementById('install-banner');
   const btn    = document.getElementById('install-btn');

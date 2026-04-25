@@ -169,7 +169,7 @@ window.onFileSaved = async (path) => {
             }
         }
         
-        if (!('showSaveFilePicker' in window)) {
+        if (!('showSaveFilePicker' in window) && !filename.endsWith('.cfg')) {
             const blob = new Blob([data], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -179,6 +179,7 @@ window.onFileSaved = async (path) => {
             URL.revokeObjectURL(url);
             console.log(`File ${path} downloaded automatically.`);
         }
+
     } catch (e) {
         console.error(`Failed to handle file save for ${path}:`, e);
     }
@@ -367,9 +368,10 @@ function initSettings() {
         
         if (canvasY < 30) {
             // Top area (first 30px): Settings menu!
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
             loadSettings();
         } else {
+
             // Rest of the screen: Clipboard menu!
             const clipModal = document.getElementById('clipboard-modal');
             clipModal.style.display = 'block';
@@ -388,15 +390,24 @@ function initSettings() {
 
     // Close modals when clicking outside
     window.addEventListener('click', (e) => {
-        if (e.target === modal) {
+        if (e.target === modal || e.target.classList.contains('files-backdrop')) {
             modal.style.display = 'none';
             saveSettings();
         }
-        if (clipModal && e.target === clipModal) {
+        if (clipModal && (e.target === clipModal || e.target.classList.contains('theme-backdrop'))) {
             clipModal.style.display = 'none';
         }
-
     });
+
+    // Bottom close button
+    const bottomCloseBtn = document.getElementById('settings-bottom-close');
+    if (bottomCloseBtn) {
+        bottomCloseBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            saveSettings();
+        });
+    }
+
 
     // File I/O actions
     const uploadBtn = document.getElementById('upload-file-btn');
@@ -734,7 +745,234 @@ function performHapticClick() {
     }
 }
 
+window.r47RequestFile = async (kind) => {
+    console.log("window.r47RequestFile called with kind:", kind);
+    
+    // If native file picker is supported, use it instead of the internal browser
+    if ('showSaveFilePicker' in window) {
+        console.log("Native file picker supported, using it for kind:", kind);
+        
+        if (kind === 'load-state' || kind === 'load-program') {
+            try {
+                const [handle] = await window.showOpenFilePicker({
+                    id: kind, // Remember directory for this kind
+                    types: [{
+                        description: 'R47 Files',
+                        accept: { 'application/octet-stream': ['.s47', '.p47'] }
+                    }],
+                    multiple: false
+                });
+
+                const file = await handle.getFile();
+                const buffer = await file.arrayBuffer();
+                const data = new Uint8Array(buffer);
+                const path = `/persist/uploads/${file.name}`;
+                
+                try {
+                    Module.FS.mkdir('/persist/uploads');
+                } catch (e) { /* ignore if exists */ }
+                
+                Module.FS.writeFile(path, data);
+                Module.ccall('r47_stage_upload', null, ['string'], [path]);
+                
+                if (kind === 'load-state') {
+                    Module.ccall('r47_load_state_named', null, ['string'], [file.name], { async: true });
+                } else {
+                    Module.ccall('r47_load_program_named', null, ['string'], [file.name], { async: true });
+                }
+                return true;
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Failed to pick file:', err);
+                }
+                return false;
+            }
+        }
+        
+        if (kind === 'save-state' || kind === 'save-program' || kind === 'export-rtf') {
+            try {
+                let defaultName = kind === 'save-state' ? 'R47.sav' : 'program.p47';
+                if (kind === 'export-rtf') defaultName = 'program.rtf';
+                
+                if (kind === 'save-program' || kind === 'export-rtf') {
+                    const currentPgmNum = Module.ccall('r47_current_program_number', 'number', [], []);
+                    const name = Module.ccall('r47_program_label_at', 'string', ['number'], [currentPgmNum]);
+                    if (name && name !== 'untitled') {
+                        defaultName = `${name}.${kind === 'export-rtf' ? 'rtf' : 'p47'}`;
+                    }
+                }
+                
+                const handle = await window.showSaveFilePicker({
+                    id: kind, // Remember directory for this kind
+                    suggestedName: defaultName,
+                    types: [{
+                        description: kind === 'export-rtf' ? 'RTF Document' : 'R47 Files',
+                        accept: kind === 'export-rtf' ? { 'application/rtf': ['.rtf'] } : { 'application/octet-stream': ['.s47', '.p47'] }
+                    }],
+                });
+                
+                const name = handle.name;
+                Module.ccall('r47_set_save_name', null, ['string'], [name]);
+                
+                if (kind === 'save-state') {
+                    await Module.ccall('r47_save_state', null, [], [], { async: true });
+                } else if (kind === 'save-program') {
+                    await Module.ccall('r47_save_program', null, [], [], { async: true });
+                } else if (kind === 'export-rtf') {
+                    await Module.ccall('r47_export_rtf_program_named', null, ['string'], [name], { async: true });
+                }
+                
+                const tab = kind === 'save-state' ? 'STATE' : 'PROGRAMS';
+                const path = `/persist/${tab}/${name}`;
+                const data = Module.FS.readFile(path);
+                
+                const writable = await handle.createWritable();
+                await writable.write(data);
+                await writable.close();
+                console.log('File saved successfully via JS');
+                return true;
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Failed to save file:', err);
+                }
+                return false;
+            }
+        }
+
+
+
+        
+        if (kind === 'snap-file') {
+            try {
+                const now = new Date();
+                const timestamp = now.toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
+                const filename = `SNAP_${timestamp}.bmp`;
+                
+                // Trigger screen dump in core to populate buffer
+                Module.ccall('r47_snap_named', null, ['string'], [filename], { async: true });
+                
+                // Get buffer pointer and size from WASM
+                const ptr = Module._getSnapBufferPtr();
+                const size = Module._getSnapBufferSize();
+                
+                if (ptr === 0 || size === 0) {
+                    console.error('Failed to get SNAP data from WASM');
+                    return false;
+                }
+                
+                const data = new Uint8Array(Module.HEAPU8.buffer, ptr, size);
+                
+                const handle = await window.showSaveFilePicker({
+                    id: 'snap-file', // Remember directory for SNAP
+                    suggestedName: filename,
+                    types: [{
+                        description: 'BMP Image',
+                        accept: {'image/bmp': ['.bmp']},
+                    }],
+                });
+
+                
+                const writable = await handle.createWritable();
+                await writable.write(data);
+                await writable.close();
+                console.log('SNAP file saved successfully via JS');
+                return true;
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Failed to save SNAP file:', err);
+                }
+                return false;
+            }
+        }
+        
+        return false;
+    }
+
+    
+    if (kind === 'save-state' || kind === 'save-program' || kind === 'export-rtf') {
+        let defaultName = kind === 'save-state' ? 'R47.sav' : 'program.p47';
+        if (kind === 'export-rtf') defaultName = 'program.rtf';
+        
+        if (kind === 'save-program' || kind === 'export-rtf') {
+            const currentPgmNum = Module.ccall('r47_current_program_number', 'number', [], []);
+            const name = Module.ccall('r47_program_label_at', 'string', ['number'], [currentPgmNum]);
+            if (name && name !== 'untitled') {
+                defaultName = `${name}.${kind === 'export-rtf' ? 'rtf' : 'p47'}`;
+            }
+        }
+
+        const name = prompt("Enter filename to save:", defaultName);
+        if (name) {
+            Module.ccall('r47_set_save_name', null, ['string'], [name]);
+            if (kind === 'save-state') {
+                Module.ccall('r47_save_state_named', null, ['string'], [name], { async: true });
+            } else if (kind === 'save-program') {
+                Module.ccall('r47_save_program_named', null, ['string'], [name], { async: true });
+            } else if (kind === 'export-rtf') {
+                Module.ccall('r47_export_rtf_program_named', null, ['string'], [name], { async: true });
+            }
+
+            return true;
+        }
+        return false;
+    }
+
+    
+    if (kind === 'snap-file') {
+        try {
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
+            const filename = `SNAP_${timestamp}.bmp`;
+            
+            // Trigger screen dump in core to populate buffer
+            Module.ccall('r47_snap_named', null, ['string'], [filename], { async: true });
+            
+            // Get buffer pointer and size from WASM
+            const ptr = Module._getSnapBufferPtr();
+            const size = Module._getSnapBufferSize();
+            
+            if (ptr === 0 || size === 0) {
+                console.error('Failed to get SNAP data from WASM');
+                alert("Failed to get snapshot data.");
+                return false;
+            }
+            
+            const data = new Uint8Array(Module.HEAPU8.buffer, ptr, size);
+            const blob = new Blob([data], { type: 'image/bmp' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            console.log('SNAP file downloaded successfully');
+            return true;
+        } catch (err) {
+            console.error('Failed to handle SNAP file:', err);
+            alert("Failed to save snapshot.");
+            return false;
+        }
+    }
+    
+    let tab = 'PROGRAMS';
+    if (kind === 'load-state') tab = 'STATE';
+    if (kind === 'load-savfile') tab = 'SAVFILES';
+    
+    if (window.FileBrowser) {
+        window.FileBrowser.currentTab = tab;
+        window.FileBrowser.operationMode = kind;
+        window.FileBrowser.show();
+    } else {
+        console.error("FileBrowser is not initialized!");
+    }
+};
+
+
+
+
 function updateAlphaLabels() {
+
     const isAlpha = false; // Mocked as false because isAlphaMode is not exported
 
     const buttons = document.querySelectorAll('.btn');

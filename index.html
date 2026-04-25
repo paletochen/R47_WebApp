@@ -225,13 +225,18 @@
           <label for="force-close-exit">Force Close on f-shift EXIT</label>
           <input type="checkbox" id="force-close-exit">
         </div>
-        <div class="settings-row">
+        <div class="settings-row" id="settings-work-dir-row">
           <label>Work Directory</label>
           <div class="work-dir-controls">
             <button type="button" id="work-directory-btn">Select Folder</button>
             <span id="work-directory-status">Not selected</span>
           </div>
         </div>
+        <div class="settings-row" id="settings-ios-storage-row" hidden>
+          <label>Calculator Storage</label>
+          <button type="button" id="fb-open-btn">Manage Storage</button>
+        </div>
+
         <div class="settings-row">
           <button type="button" id="factory-reset-btn" class="danger-btn">Reset to Factory Defaults</button>
         </div>
@@ -245,7 +250,11 @@
           <label for="beeper-volume">Beeper Volume</label>
           <input type="range" id="beeper-volume" min="0" max="100" value="20">
         </div>
+        <div class="settings-row">
+          <button type="button" id="settings-bottom-close" class="danger-btn" style="background-color: var(--popup-button-bg) !important; border-color: var(--popup-button-border) !important;">Close Settings</button>
+        </div>
       </div>
+
     </div>
   </div>
 
@@ -295,6 +304,8 @@
       });
       inject('shell.js?v=' + new Date().getTime());
       inject('app.js?v=' + new Date().getTime());
+      inject('file_browser.js?v=' + new Date().getTime());
+
 
 
     })();
